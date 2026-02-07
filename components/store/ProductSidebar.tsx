@@ -4,7 +4,8 @@ import { ChevronRight, Package } from "lucide-react";
 
 export async function ProductSidebar() {
     // Fetch categories and their products
-    const { data: categories } = await supabase
+    // Fetch categories and their products
+    const { data: categories, error } = await supabase
         .from('categories')
         .select(`
             id, 
@@ -13,6 +14,11 @@ export async function ProductSidebar() {
             products (id, name, slug)
         `)
         .order('name');
+    
+    if (error) {
+        console.error('Error fetching categories for sidebar:', error);
+        return <div className="p-4 text-red-500 text-sm">Error loading sidebar: {error.message}</div>;
+    }
     
     return (
         <aside className="w-full bg-white rounded-xl border border-slate-200 shadow-sm sticky top-24 flex flex-col max-h-[calc(100vh-8rem)]">

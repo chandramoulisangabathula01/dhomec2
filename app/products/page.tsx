@@ -5,14 +5,19 @@ import { ArrowRight } from "lucide-react";
 export const dynamic = 'force-dynamic';
 
 export default async function Products() {
-  // Fetch categories with enriched product count
-  let { data: categories } = await supabase
+  // Fetch categories with product IDs to count them
+  let { data: categories, error } = await supabase
     .from('categories')
     .select(`
         *,
-        products (count)
+        products (id)
     `)
     .order('name');
+
+  if (error) {
+    console.error('Error fetching categories:', error);
+    return <div className="p-4 text-red-500">Error loading categories: {error.message}</div>;
+  }
 
   // Manual image overrides
   const categoryImages: Record<string, string> = {
@@ -33,7 +38,7 @@ export default async function Products() {
    const displayCategories = categories?.map((cat: any) => ({
       ...cat,
       image_url: categoryImages[cat.name] || cat.image_url,
-      count: cat.products?.[0]?.count || 0
+      count: cat.products?.length || 0
   })) || [];
 
   return (
