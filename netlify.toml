@@ -1,14 +1,6 @@
 [build]
-<<<<<<< HEAD
-command = "npx next build"
-publish = ".next"
-
-[[plugins]]
-package = "@netlify/plugin-nextjs"
-=======
   command = "npm run build"
   publish = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
->>>>>>> c1d95f7 (ready to deploy)
