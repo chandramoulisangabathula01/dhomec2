@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,11 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useSearchParams } from "next/navigation";
 
-export default function Enquiry() {
+function EnquiryContent() {
   const searchParams = useSearchParams();
-  const productName = searchParams.get('product');
+// ... existing imports
+
+  const productName = searchParams.get('product') || "";
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -29,6 +31,12 @@ export default function Enquiry() {
      const input = document.getElementById("name");
      if (input) input.focus();
   }, []);
+
+  useEffect(() => {
+    if (productName) {
+        setFormData(prev => ({ ...prev, message: `I'm interested in ${productName}` }));
+    }
+  }, [productName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -172,5 +180,13 @@ export default function Enquiry() {
          <Footer />
       </div>
     </div>
+  );
+}
+
+export default function Enquiry() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>}>
+      <EnquiryContent />
+    </Suspense>
   );
 }
