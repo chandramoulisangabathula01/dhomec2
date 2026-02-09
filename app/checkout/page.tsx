@@ -21,10 +21,11 @@ export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handlePayment = async (orderId: string, amount: number) => {
+    const supabase = createClient();
     const res = await supabase.auth.getUser();
+
     const user = res.data.user;
 
     const options = {
