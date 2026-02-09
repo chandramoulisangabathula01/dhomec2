@@ -3,7 +3,12 @@ import { supabase } from "@/lib/supabase";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const { data: categories } = await supabase.from('categories').select('slug');
+  return categories?.map(({ slug }) => ({ slug })) || [];
+}
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

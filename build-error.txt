@@ -1,0 +1,189 @@
+﻿Γû▓ Next.js 16.1.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 4.9s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/97) ...
+npx : Error occurred 
+prerendering page "/produc
+ts/our-product-range-inclu
+des-a-wide-range-of-motorl
+ine-kvm115-motor-sectional
+-door-opener-motorline-kvm
+25-motor-sectional-garage-
+door-opener-moterline-ross
+o-pro-motor-sectional-gara
+ge-door-opener-motorline-r
+osso-evo-motor-sectional-g
+arage-door-opener-motorlin
+e-kfm-motor-sectional-door
+-opener-and-motorline-kvm2
+05-motor-sectional-door-op
+ener". Read more: https://
+nextjs.org/docs/messages/p
+rerender-error
+At line:1 char:1
++ npx next build 2>&1 | 
+Out-File -FilePath 
+build-error.txt -Encoding 
+ut ...
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (E  
+  rror occurred ...prer   
+ ender-error:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+Error: ENOENT: no such 
+file or directory, mkdir 
+'C:\Users\chandra 
+mouli\Documents\dhomec - C
+opy\.next\server\app\produ
+cts\our-product-range-incl
+udes-a-wide-range-of-motor
+line-kvm115-motor-sectiona
+l-door-opener-motorline-kv
+m25-motor-sectional-garage
+-door-opener-moterline-ros
+so-pro-motor-sectional-gar
+age-door-opener-motorline-
+rosso-evo-motor-sectional-
+garage-door-opener-motorli
+ne-kfm-motor-sectional-doo
+r-opener-and-motorline-kvm
+205-motor-sectional-door-o
+pener.segments'
+    at ignore-listed 
+frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'mkdir',
+  path: 
+'C:\\Users\\chandra 
+mouli\\Documents\\dhomec 
+- Copy\\.next\\server\\app
+\\products\\our-product-ra
+nge-includes-a-wide-range-
+of-motorline-kvm115-motor-
+sectional-door-opener-moto
+rline-kvm25-motor-sectiona
+l-garage-door-opener-moter
+line-rosso-pro-motor-secti
+onal-garage-door-opener-mo
+torline-rosso-evo-motor-se
+ctional-garage-door-opener
+-motorline-kfm-motor-secti
+onal-door-opener-and-motor
+line-kvm205-motor-sectiona
+l-door-opener.segments'
+}
+Export encountered an 
+error on 
+/products/[slug]/page: /pr
+oducts/our-product-range-i
+ncludes-a-wide-range-of-mo
+torline-kvm115-motor-secti
+onal-door-opener-motorline
+-kvm25-motor-sectional-gar
+age-door-opener-moterline-
+rosso-pro-motor-sectional-
+garage-door-opener-motorli
+ne-rosso-evo-motor-section
+al-garage-door-opener-moto
+rline-kfm-motor-sectional-
+door-opener-and-motorline-
+kvm205-motor-sectional-doo
+r-opener, exiting the 
+build.
+Error occurred 
+prerendering page "/produc
+ts/distributor-channel-par
+tner-of-a-wide-range-of-pr
+oducts-which-include-motor
+line-turbo-automatic-barri
+er-motorline-mpie10-stainl
+ess-steel-bollards-motorli
+ne-sigma-xs5-electromechan
+ical-barrier-motorline-sig
+ma-x-electromechanical-bar
+rier-motorline-sigma-xa5-e
+lectromechanical-barrier-a
+nd-motorline-automatic-cha
+in-barrier". Read more: ht
+tps://nextjs.org/docs/mess
+ages/prerender-error
+Error: ENOENT: no such 
+file or directory, mkdir 
+'C:\Users\chandra 
+mouli\Documents\dhomec - C
+opy\.next\server\app\produ
+cts\distributor-channel-pa
+rtner-of-a-wide-range-of-p
+roducts-which-include-moto
+rline-turbo-automatic-barr
+ier-motorline-mpie10-stain
+less-steel-bollards-motorl
+ine-sigma-xs5-electromecha
+nical-barrier-motorline-si
+gma-x-electromechanical-ba
+rrier-motorline-sigma-xa5-
+electromechanical-barrier-
+and-motorline-automatic-ch
+ain-barrier.segments'
+    at ignore-listed 
+frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'mkdir',
+  path: 
+'C:\\Users\\chandra 
+mouli\\Documents\\dhomec 
+- Copy\\.next\\server\\app
+\\products\\distributor-ch
+annel-partner-of-a-wide-ra
+nge-of-products-which-incl
+ude-motorline-turbo-automa
+tic-barrier-motorline-mpie
+10-stainless-steel-bollard
+s-motorline-sigma-xs5-elec
+tromechanical-barrier-moto
+rline-sigma-x-electromecha
+nical-barrier-motorline-si
+gma-xa5-electromechanical-
+barrier-and-motorline-auto
+matic-chain-barrier.segmen
+ts'
+}
+Export encountered an 
+error on 
+/products/[slug]/page: /pr
+oducts/distributor-channel
+-partner-of-a-wide-range-o
+f-products-which-include-m
+otorline-turbo-automatic-b
+arrier-motorline-mpie10-st
+ainless-steel-bollards-mot
+orline-sigma-xs5-electrome
+chanical-barrier-motorline
+-sigma-x-electromechanical
+-barrier-motorline-sigma-x
+a5-electromechanical-barri
+er-and-motorline-automatic
+-chain-barrier, exiting 
+the build.
+Γ¿» Next.js build worker 
+exited with code: 1 and 
+signal: null
+uncaughtException Error: 
+kill EPERM
+    at ignore-listed 
+frames {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'kill'
+}

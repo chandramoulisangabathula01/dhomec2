@@ -39,7 +39,8 @@ export default function EditProductPage() {
     frequency: "",
     voltage: "",
     model_name: "",
-    is_featured: false
+    is_featured: false,
+    three_d_model_url: ""
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,8 @@ export default function EditProductPage() {
              // Mock
              setFormData({
                  name: "Demo Product", slug: "demo-product", category_id: "1", description: "Demo Desc", image_url: "", images: [],
-                 pdf_url: "", price: "50000", material: "Steel", usage_application: "Mall", color: "Silver", brand: "Demo", automation_grade: "Automatic", frequency: "50Hz", voltage: "220V", model_name: "D-100", is_featured: true
+                 pdf_url: "", price: "50000", material: "Steel", usage_application: "Mall", color: "Silver", brand: "Demo", automation_grade: "Automatic", frequency: "50Hz", voltage: "220V", model_name: "D-100", is_featured: true,
+                 three_d_model_url: ""
              });
              setLoading(false);
              return;
@@ -95,7 +97,8 @@ export default function EditProductPage() {
                  frequency: product.frequency || "",
                  voltage: product.voltage || "",
                  model_name: product.model_name || "",
-                 is_featured: product.is_featured || false
+                 is_featured: product.is_featured || false,
+                 three_d_model_url: product.three_d_model_url || ""
              });
          }
          setLoading(false);
@@ -163,7 +166,8 @@ export default function EditProductPage() {
             frequency: formData.frequency || null,
             voltage: formData.voltage || null,
             model_name: formData.model_name || null,
-            is_featured: formData.is_featured
+            is_featured: formData.is_featured,
+            three_d_model_url: formData.three_d_model_url || null
         };
 
         const { error: updateError } = await supabase
@@ -308,6 +312,18 @@ export default function EditProductPage() {
                           <label className="block text-sm font-medium text-foreground mb-2">PDF URL</label>
                           <input type="url" value={formData.pdf_url} onChange={(e) => setFormData({...formData, pdf_url: e.target.value})} 
                           className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                      </div>
+
+                      <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">3D Model URL</label>
+                          <input 
+                              type="url" 
+                              value={formData.three_d_model_url}
+                              onChange={(e) => setFormData({...formData, three_d_model_url: e.target.value})}
+                              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="https://my.spline.design/..."
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Embed URL from Spline, Sketchfab, etc.</p>
                       </div>
                   </div>
               </div>

@@ -78,7 +78,7 @@ export function ProductCategoriesModern() {
         const { data, error } = await query;
 
         if (error) {
-          console.error("Error fetching categories:", error);
+          console.error("Error fetching categories:", error.message || JSON.stringify(error) || error);
           setCategories(categoryData);
         } else if (data && data.length > 0) {
           setCategories(data);

@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
+import { CartProvider } from "@/context/CartContext";
+import { CartDrawer } from "@/components/cart/CartDrawer";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -30,8 +32,11 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
         >
+          <CartProvider>
             {children}
             <FloatingWhatsApp />
+            <CartDrawer />
+          </CartProvider>
         </ThemeProvider>
       </body>
     </html>

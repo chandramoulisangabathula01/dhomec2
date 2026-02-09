@@ -11,7 +11,7 @@ import { EnquiryForm } from "@/components/landing/EnquiryForm";
 import { CtaModern } from "@/components/landing/CtaModern";
 import { FooterModern } from "@/components/landing/FooterModern";
 
-export const dynamic = 'force-dynamic';
+
 
 export default function Home() {
   return (

@@ -1,0 +1,159 @@
+Software Development Agency
+Dhomec Execution
+contact@egma.in
+egma.in
+11 July 2025
+1. 📅 Project Understanding
+Dhoomec is seeking a comprehensive web-based solution that supports:
+● Direct product sales (e-commerce)
+● Measurement/consultation-based product inquiry
+● Role-based access
+● Product customization & configuration
+● Secure authentication and payment
+● Scalable architecture for future seller/franchise onboarding
+● Returns management and ticketing system
+This project demands a seamless and performance-optimized platform reflecting
+Motorline.pt's design quality, with functionality tailored for Indian customer behavior and
+administrative needs.
+2. ⚖ Methodology
+We adopt a hybrid Agile approach allowing for flexibility in requirements, rapid iteration,
+and early visibility.
+Project Phases:
+1. Discovery & Planning
+2. UI/UX Design
+3. Frontend Development
+4. Backend API & Database Development
+5. Integration & Testing
+6. Security, Compliance & Deployment
+7. Handover, Training & Support
+3. ✏ Detailed Phase-wise Approach
+Phase 1: Discovery & Planning
+Duration: Week 1
+● Deep dive sessions with client (via call/meet)
+● Document business flows, data models, role hierarchies
+● Identify consultation vs direct product parameters
+● Finalize third-party services (WhatsApp API, Razorpay, Zakeke)
+● Define MVP scope and scalable modules
+Phase 2: UI/UX Design
+Duration: Week 2 – Week 4
+● Tools: Figma
+● Deliverables:
+○ Home, Product, Login/Register, Dashboard, Cart, Checkout, Ticketing UIs
+○ UX flows for inquiry + ecommerce checkout
+○ Mobile-first responsive designs
+○ Client walkthrough and approval loop
+Phase 3: Frontend Development
+Duration: Week 4 – Week 7
+● Framework: Next.js
+● Key features:
+○ Page routing and state management
+○ Component-based architecture
+○ Animation and image optimization
+○ Fully responsive breakpoints
+○ Integration-ready structure
+Phase 4: Backend & API Development
+Duration: Week 7 – Week 10
+● Stack: Node.js + Express + MongoDB
+● Secure REST API architecture
+● Features:
+○ OTP Auth (Email + WhatsApp)
+○ Role-based access control (RBAC)
+○ Product/Category CRUD + 3D Link embedding
+○ Cart + Order + Wishlist Management
+○ Status flow: Placed ➔ Accepted ➔ Packed ➔ Shipped
+○ Razorpay integration
+○ Returns module + refund triggers
+○ Ticketing engine with employee assignment
+○ Admin analytics + user control
+Phase 5: Integration & QA
+Duration: Week 11
+● Connect frontend with backend
+● Perform functional, regression, and device testing
+● Validate all roles & flows
+● UAT with client
+Phase 6: Security, Compliance & Deployment
+Duration: Week 12
+● Bcrypt password hashing
+● Secure OTP & env variables
+● Cookie and T&C compliance
+● Alerts for unauthorized access
+● Deployment on Vercel/Render (with MongoDB Atlas)
+● SSL configuration
+4. 📊 Tools & Technologies
+Layer Technology
+Design Figma
+Frontend Next.js, Tailwind CSS
+Backend Node.js, Express.js
+Database MongoDB (Atlas), Cloudinary (Image)
+Auth & OTP WhatsApp Business API, Nodemailer, Fast2SmS
+Payment Razorpay
+Deployment Provided by Client (Recommended - Hostinger VPS)
+5. 📆 Timeline Overview
+Phase Duration
+Planning & Discovery Week 1
+UI/UX Design Week 2 – 4
+Frontend Development Week 4 – 7
+Backend Development Week 7 – 10
+Integration & QA Week 11
+Deployment & Handover Week 12
+Total Duration 3 Months
+6. 🚀 Success Criteria
+● Fully functional,Web platform
+● Seamless admin experience for product, order, ticket & user control
+● Minimal user drop-off with optimized UX
+● Secure, scalable backend ready for expansion
+● Delivered within agreed timeline and scope
+📩 Requirements from Client
+To ensure timely delivery and successful deployment, the following items are required
+from Dhomec:
+A. Email Setup (for notifications, OTPs, etc.)
+● Email Provider Access (e.g., Hostinger, Zoho, Gmail Workspace)
+● SMTP Credentials:
+○ SMTP Host
+○ Port (usually 465 or 587)
+○ Username (email address)
+○ App Password or SMTP Password
+✅ We will guide the client step-by-step to generate App Password from Gmail if Gmail is
+used.
+B. SMS Gateway (Transactional SMS to customers)
+● DLT Registration
+● Access to SMS Gateway provider (e.g., Fast2SMS, MSG91,)
+● API Key & Sender ID
+● Approved SMS templates
+C. Product Fields Data
+● A detailed Excel or CSV format containing Products.
+● HSN(Harmonised System Nomenclature) shall be provide for all products.
+● For direct sale products, LxBxH and weight shall be provided for syncing with
+Logistics.
+D. Legal & Brand Documents
+● Company GST Details
+● Brand Logo in SVG/PNG
+● Return/Refund Policy
+● T&C and Privacy Policy drafts
+E. Cloudinary Setup (for media/image hosting)
+● Cloudinary account (https://cloudinary.com/)
+● API Key
+● API Secret
+● Cloud Name
+✅ These credentials allow us to securely upload and manage product images and
+other media files from the platform.
+F. Logistics API / Shipping Setup
+● Details of courier/shipping service provider (e.g., Delhivery, Shiprocket, DTDC)
+● API Access Credentials:
+○ API Key
+○ Secret Key (if applicable)
+○ Base URL / Endpoint
+● Approved sender name(Pickup and return address)
+● Preferred shipping rules (zones, weight, COD availability)
+G. Domain & Hosting Access
+● Domain Registrar Access (GoDaddy, Namecheap, etc)
+○ Domain Name
+○ Username & Password OR provide DNS access for record setup
+● Hosting Provider
+○ Control Panel or Server Credentials (cPanel/SSH/FTP)
+✅ We need these to set up DNS records, deploy the frontend/backend, configure SSL,
+and ensure mail delivery works properly.
+H. Razorpay payment gateway credentials
+● Access to Razorpay dashboard and API functionalities
+○ This enables us to integrate the Web App to Razorpay payment gateway’s
+API’s for smoother functionality.

@@ -5,7 +5,12 @@ import { ArrowLeft } from "lucide-react";
 import ProductGallery from "@/components/products/ProductGallery";
 import { ProductInfo } from "@/components/products/ProductInfo";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const { data: products } = await supabase.from('products').select('slug');
+  return products?.map(({ slug }) => ({ slug })) || [];
+}
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

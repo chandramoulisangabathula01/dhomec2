@@ -35,7 +35,8 @@ export default function NewProductPage() {
     frequency: "",
     voltage: "",
     model_name: "",
-    is_featured: false
+    is_featured: false,
+    three_d_model_url: ""
   });
 
   // Fetch Categories for Dropdown
@@ -153,7 +154,8 @@ export default function NewProductPage() {
             frequency: formData.frequency || null,
             voltage: formData.voltage || null,
             model_name: formData.model_name || null,
-            is_featured: formData.is_featured
+            is_featured: formData.is_featured,
+            three_d_model_url: formData.three_d_model_url || null
         };
 
         const { error: insertError, data: insertedData } = await supabase
@@ -366,6 +368,18 @@ export default function NewProductPage() {
                               placeholder="https://example.com/brochure.pdf"
                           />
                           <p className="text-xs text-muted-foreground mt-1">Provide a direct link to the PDF file</p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">3D Model URL</label>
+                          <input 
+                              type="url" 
+                              value={formData.three_d_model_url}
+                              onChange={(e) => setFormData({...formData, three_d_model_url: e.target.value})}
+                              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                              placeholder="https://my.spline.design/..."
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Embed URL from Spline, Sketchfab, etc.</p>
                       </div>
                   </div>
               </div>

@@ -1,0 +1,15 @@
+INSERT INTO public.categories (id, name, slug, description) VALUES
+('8c424b5a-2f03-4305-92f6-9c4b44fb9b32', 'Road Traffic Control', 'road-traffic-control', 'Traffic control solutions including barriers and bollards.'),
+('98e2ed97-6cd5-46ef-a686-b755fc3529ab', 'Swing Gates Opener', 'swing-gates-opener', 'Automation for swing gates.'),
+('5cf6b645-23d5-4617-b51f-431ffdfacb13', 'Rapid Door', 'rapid-door', 'High-speed roll-up doors.'),
+('c5c47739-e083-4436-bb3c-dbbcc4d41ce2', 'Garage Doors Opener', 'garage-doors-opener', 'Sectional and garage door openers.'),
+('0ede0bee-b792-433f-a09a-f16ad1d5bed8', 'Glass Doors', 'glass-doors', 'Automatic sliding glass doors.'),
+('b099d339-5e9a-412d-9a66-ba1c45cee854', 'Sliding Gate Opener', 'sliding-gate-opener', 'Automation for sliding gates.'),
+('a0c51458-feb6-4346-97b0-9c056a8610ea', 'Door Closer', 'door-closer', 'Automatic door closers.'),
+('737fa5d1-02ab-460e-87e0-9000e87f5711', 'Infrared Detection Radar', 'infrared-detection-radar', 'Safety sensors and radars.'),
+('0ee53cb3-8b4d-48f3-9f81-ff1a7b1fa1a9', 'Swing Shutter', 'swing-shutter', 'Automation for swing shutters.'),
+('e9c79549-34c7-4eed-82ba-1da8f3442e03', 'Microwave Sensor', 'microwave-sensor', 'Microwave sensors for door activation.'),
+('f4cab552-2f18-4dc3-8fcf-08d43d0b9886', 'Mild Steel Gate', 'mild-steel-gate', 'Mild steel sliding gates.'),
+('259d5842-b6aa-4faa-8636-a7eedfc20427', 'Fire Curtains', 'fire-curtains', 'Automatic fireproof curtains.'),
+('9fd02d7f-a029-45c9-8627-014806bb6adb', 'Tripod Turnstile', 'tripod-turnstile', 'Access control turnstiles.'),
+('e616ebf0-d344-456c-9f25-8f588a34749c', 'New Items', 'new-items', 'New arrivals and products.');

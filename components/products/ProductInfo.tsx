@@ -1,6 +1,9 @@
+"use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FileText, CheckCircle2 } from "lucide-react";
+import { FileText, CheckCircle2, ShoppingCart } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { useState } from "react";
 
 interface ProductInfoProps {
   product: any;
@@ -8,6 +11,22 @@ interface ProductInfoProps {
 }
 
 export function ProductInfo({ product, className }: ProductInfoProps) {
+  const { addItem } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price || 0,
+      quantity: 1,
+      image_url: product.image_url,
+      slug: product.slug,
+    });
+    setTimeout(() => setIsAdding(false), 500);
+  };
+
   return (
     <div className={className}>
       <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">{product.name}</h1>
@@ -15,10 +34,16 @@ export function ProductInfo({ product, className }: ProductInfoProps) {
       
       {/* Price */}
       {product.price && (
-          <div className="mb-6 bg-muted/30 p-4 rounded-lg border border-border inline-block min-w-[200px]">
-              <span className="text-sm text-muted-foreground block mb-1">Approx. Price:</span>
-              <span className="text-3xl font-bold text-foreground">₹ {product.price.toLocaleString('en-IN')}</span>
-              <span className="text-muted-foreground text-sm ml-1">/ Piece</span>
+          <div className="mb-6 flex flex-col gap-4">
+              <div className="bg-muted/30 p-4 rounded-lg border border-border inline-block min-w-[200px]">
+                  <span className="text-sm text-muted-foreground block mb-1">Approx. Price:</span>
+                  <span className="text-3xl font-bold text-foreground">₹ {product.price.toLocaleString('en-IN')}</span>
+                  <span className="text-muted-foreground text-sm ml-1">/ Piece</span>
+              </div>
+              <Button onClick={handleAddToCart} disabled={isAdding} className="w-full md:w-auto gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                {isAdding ? "Added!" : "Add to Cart"}
+              </Button>
           </div>
       )}
 
