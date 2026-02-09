@@ -7,8 +7,12 @@ export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const { data: categories } = await supabase.from('categories').select('slug');
-  return categories?.map(({ slug }) => ({ slug })) || [];
+  // Filter out slugs that are too long for the file system
+  return categories
+    ?.filter(({ slug }) => slug && slug.length < 200)
+    .map(({ slug }) => ({ slug })) || [];
 }
+
 
 export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

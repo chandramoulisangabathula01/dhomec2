@@ -9,8 +9,12 @@ export const revalidate = 3600;
 
 export async function generateStaticParams() {
   const { data: products } = await supabase.from('products').select('slug');
-  return products?.map(({ slug }) => ({ slug })) || [];
+  // Filter out slugs that are too long for the file system (ENAMETOOLONG)
+  return products
+    ?.filter(({ slug }) => slug && slug.length < 200)
+    .map(({ slug }) => ({ slug })) || [];
 }
+
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
