@@ -39,15 +39,20 @@ export async function createOrder(
 
   if (orderError) {
     console.error("Error creating order:", orderError, orderDetails);
-    throw new Error("Failed to create order record");
+    throw new Error("Failed to create order record: " + orderError.message);
   }
 
   // 3. Create Order Items
+  if (!orderDetails.items || !Array.isArray(orderDetails.items) || orderDetails.items.length === 0) {
+      console.warn("Order created with no items:", order.id);
+      return order;
+  }
+
   const orderItemsInput = orderDetails.items.map((item: any) => ({
     order_id: order.id,
-    product_id: item.id, // Using item.id which is the product id in client cart
-    quantity: item.quantity,
-    price_at_purchase: item.price, // Snapshot price from client
+    product_id: item.id || item.product_id, // Handle potential key differences
+    quantity: item.quantity || 1,
+    price_at_purchase: item.price || 0, // Snapshot price from client
   }));
 
   const { error: itemsError } = await supabase
@@ -56,7 +61,10 @@ export async function createOrder(
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    throw new Error("Failed to create order items");
+    // Don't fail the order creation entirely if items fail, but log it. 
+    // Ideally we should rollback, but Supabase HTTP client doesn't support transactions easily without RPC.
+    // We throw so client knows something is wrong.
+    throw new Error("Failed to create order items: " + itemsError.message);
   }
 
   // 4. Cleanup (Optional: client clears localStorage)

@@ -2,12 +2,14 @@
 
 import { removeFromWishlist } from "@/app/actions/wishlist";
 import { useCart } from "@/context/CartContext";
+import { useToast } from "@/components/ui/toast";
 import { Heart, ShoppingCart, Trash2, Package } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
 export function WishlistClient({ items }: { items: any[] }) {
   const { addItem } = useCart();
+  const { addToast } = useToast();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -16,8 +18,10 @@ export function WishlistClient({ items }: { items: any[] }) {
     startTransition(async () => {
       try {
         await removeFromWishlist(productId);
+        addToast("Item removed from wishlist", "info");
       } catch (e) {
         console.error(e);
+        addToast("Failed to remove item", "error");
       }
       setRemovingId(null);
     });
@@ -32,6 +36,7 @@ export function WishlistClient({ items }: { items: any[] }) {
       image_url: product.image_url,
       slug: product.slug,
     });
+    addToast("Added to cart", "success");
   };
 
   if (items.length === 0) {
@@ -108,6 +113,7 @@ export function WishlistClient({ items }: { items: any[] }) {
                   onClick={() => handleRemove(product.id)}
                   disabled={removingId === product.id}
                   className="px-3 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                  title="Remove from wishlist"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

@@ -5,6 +5,7 @@ import { FileText, CheckCircle2, ShoppingCart, Heart, Share2, MessageCircle } fr
 import { useCart } from "@/context/CartContext";
 import { useState, useTransition } from "react";
 import { addToWishlist, removeFromWishlist } from "@/app/actions/wishlist";
+import { useToast } from "@/components/ui/toast";
 
 interface ProductInfoProps {
   product: any;
@@ -17,6 +18,7 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
   const [isAdding, setIsAdding] = useState(false);
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [isPending, startTransition] = useTransition();
+  const { addToast } = useToast();
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -28,6 +30,7 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
       image_url: product.image_url,
       slug: product.slug,
     });
+    addToast(`Added ${product.name} to cart`, "success");
     setTimeout(() => setIsAdding(false), 500);
   };
 
@@ -37,12 +40,15 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
         if (wishlisted) {
           await removeFromWishlist(product.id);
           setWishlisted(false);
+          addToast("Removed from wishlist", "info");
         } else {
           await addToWishlist(product.id);
           setWishlisted(true);
+          addToast("Added to wishlist", "success");
         }
       } catch (err) {
         console.error(err);
+        addToast("Please login to use wishlist", "error");
       }
     });
   };
@@ -56,6 +62,7 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
       });
     } else {
       navigator.clipboard.writeText(window.location.href);
+      addToast("Link copied to clipboard", "success");
     }
   };
 
