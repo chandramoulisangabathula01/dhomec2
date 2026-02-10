@@ -125,27 +125,41 @@ export async function getOrderById(orderId: string) {
 }
 
 export async function createRazorpayOrder(amount: number) {
+    console.log("Starting createRazorpayOrder with amount:", amount);
+    
+    // Debug logging for env vars (masking secrets)
+    console.log("Checking Razorpay Keys...");
+    console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID present:", !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
+    console.log("RAZORPAY_KEY_SECRET present:", !!process.env.RAZORPAY_KEY_SECRET);
+
     const Razorpay = require("razorpay");
     
     if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        console.error("Razorpay keys are missing!");
         throw new Error("Razorpay keys are not configured");
     }
 
-    const instance = new Razorpay({
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-
     try {
+        const instance = new Razorpay({
+            key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+
+        console.log("Razorpay instance created. Creating order...");
         const order = await instance.orders.create({
             amount: Math.round(amount * 100), // amount in the smallest currency unit
             currency: "INR",
             receipt: `receipt_order_${Date.now()}`,
         });
+        
+        console.log("Razorpay order created successfully:", order.id);
         return { id: order.id, amount: order.amount };
-    } catch (error) {
-        console.error("Razorpay order error:", error);
-        throw new Error("Failed to create Razorpay order");
+    } catch (error: any) {
+        console.error("Razorpay order creation failed:", error);
+        // Log the full error object structure if possible
+        if (error.statusCode) console.error("Status Code:", error.statusCode);
+        if (error.error) console.error("Error Details:", error.error);
+        throw new Error(`Failed to create Razorpay order: ${error.message}`);
     }
 }
 
