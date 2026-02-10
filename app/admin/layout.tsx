@@ -11,7 +11,10 @@ import {
   Star, 
   Layers, 
   Home,
-  ShieldCheck
+  ShieldCheck,
+  RotateCcw,
+  Mail,
+  Settings
 } from "lucide-react";
 import AdminHeader from "./AdminHeader";
 
@@ -51,12 +54,14 @@ export default async function AdminLayout({
         { href: "/admin/products", label: "Products", icon: Package },
         { href: "/admin/categories", label: "Categories", icon: Layers },
         { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+        { href: "/admin/returns", label: "Returns", icon: RotateCcw },
         { href: "/admin/users", label: "Users", icon: Users },
       ]
     },
     {
       label: "Engagement",
       items: [
+        { href: "/admin/enquiries", label: "Enquiries", icon: Mail },
         { href: "/admin/reviews", label: "Reviews", icon: Star },
         { href: "/admin/tickets", label: "Support Tickets", icon: MessageSquare },
       ]

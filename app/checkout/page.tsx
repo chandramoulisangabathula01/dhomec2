@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { createOrder, createRazorpayOrder } from "@/app/actions/orders";
 import Script from "next/script";
 
@@ -124,7 +124,17 @@ export default function CheckoutPage() {
     />
     <div className="min-h-screen bg-slate-50 pt-24 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <div className="flex items-center gap-4 mb-8">
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => router.back()}
+                className="hover:bg-slate-100 rounded-full"
+            >
+                <ArrowLeft className="w-5 h-5 text-slate-600" />
+            </Button>
+            <h1 className="text-3xl font-bold">Checkout</h1>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Shipping Form */}

@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { FloatingWhatsApp } from "@/components/FloatingWhatsApp";
 import { CartProvider } from "@/context/CartContext";
 import { CartDrawer } from "@/components/cart/CartDrawer";
+import { ToastProvider } from "@/components/ui/toast";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -12,8 +14,24 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Dhomec Solutions | Industrial Automation & Access Control",
-  description: "Dhomec Solutions - Professional industrial automation and access control providers. Trusted technology for growth and reliability.",
+  title: {
+    default: "Dhomec Solutions | Industrial Automation & Access Control",
+    template: "%s | Dhomec Solutions",
+  },
+  description: "Dhomec Solutions - India's trusted provider of industrial automation, gate automation, traffic control, boom barriers, and access control systems. Quality products with expert installation support.",
+  keywords: ["industrial automation", "access control", "boom barriers", "gate automation", "traffic control", "Motorline", "India", "security systems"],
+  authors: [{ name: "Dhomec Solutions" }],
+  openGraph: {
+    title: "Dhomec Solutions | Industrial Automation & Access Control",
+    description: "India's trusted provider of industrial automation, gate automation, traffic control, and access control systems.",
+    type: "website",
+    locale: "en_IN",
+    siteName: "Dhomec Solutions",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
@@ -32,11 +50,14 @@ export default function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
         >
-          <CartProvider>
-            {children}
-            <FloatingWhatsApp />
-            <CartDrawer />
-          </CartProvider>
+          <ToastProvider>
+            <CartProvider>
+              {children}
+              <FloatingWhatsApp />
+              <CartDrawer />
+              <CookieConsent />
+            </CartProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

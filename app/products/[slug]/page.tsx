@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import ProductGallery from "@/components/products/ProductGallery";
 import { ProductInfo } from "@/components/products/ProductInfo";
+import { ProductReviews } from "@/components/products/ProductReviews";
+import { getProductReviews } from "@/app/actions/reviews";
+import { isInWishlist } from "@/app/actions/wishlist";
 
 export const revalidate = 3600;
 
@@ -40,6 +44,22 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   // Parse images array (multiple images support)
   const images = product.images || [product.image_url].filter(Boolean);
+
+  // Fetch reviews and wishlist status
+  const reviews = await getProductReviews(product.id);
+  let wishlisted = false;
+  let isLoggedIn = false;
+  
+  try {
+    const serverSupabase = await createClient();
+    const { data: { user } } = await serverSupabase.auth.getUser();
+    isLoggedIn = !!user;
+    if (user) {
+      wishlisted = await isInWishlist(product.id);
+    }
+  } catch {
+    // Not logged in
+  }
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -91,8 +111,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 </div>
 
                 {/* Right: Product Details */}
-                <ProductInfo product={product} className="lg:col-span-12 xl:col-span-7" />
+                <ProductInfo 
+                  product={product} 
+                  className="lg:col-span-12 xl:col-span-7" 
+                  isWishlisted={wishlisted}
+                />
             </div>
+
+            {/* Reviews Section */}
+            <ProductReviews
+              productId={product.id}
+              reviews={reviews as any}
+              isLoggedIn={isLoggedIn}
+            />
         </div>
     </div>
   )

@@ -1,18 +1,22 @@
 "use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FileText, CheckCircle2, ShoppingCart } from "lucide-react";
+import { FileText, CheckCircle2, ShoppingCart, Heart, Share2, MessageCircle } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { addToWishlist, removeFromWishlist } from "@/app/actions/wishlist";
 
 interface ProductInfoProps {
   product: any;
   className?: string;
+  isWishlisted?: boolean;
 }
 
-export function ProductInfo({ product, className }: ProductInfoProps) {
+export function ProductInfo({ product, className, isWishlisted: initialWishlisted = false }: ProductInfoProps) {
   const { addItem } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const [wishlisted, setWishlisted] = useState(initialWishlisted);
+  const [isPending, startTransition] = useTransition();
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -27,9 +31,37 @@ export function ProductInfo({ product, className }: ProductInfoProps) {
     setTimeout(() => setIsAdding(false), 500);
   };
 
+  const handleWishlist = () => {
+    startTransition(async () => {
+      try {
+        if (wishlisted) {
+          await removeFromWishlist(product.id);
+          setWishlisted(false);
+        } else {
+          await addToWishlist(product.id);
+          setWishlisted(true);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: `Check out ${product.name} from Dhomec Solutions`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
   return (
     <div className={className}>
-<h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2 break-words leading-tight">{product.name}</h1>
+      <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2 break-words leading-tight">{product.name}</h1>
       <p className="text-lg text-primary font-medium mb-6">{product.model_name}</p>
       
       {/* Price */}
@@ -40,11 +72,51 @@ export function ProductInfo({ product, className }: ProductInfoProps) {
                   <span className="text-3xl font-bold text-foreground">₹ {product.price.toLocaleString('en-IN')}</span>
                   <span className="text-muted-foreground text-sm ml-1">/ Piece</span>
               </div>
-              <Button onClick={handleAddToCart} disabled={isAdding} className="w-full md:w-auto gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                {isAdding ? "Added!" : "Add to Cart"}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={handleAddToCart} disabled={isAdding} className="gap-2 flex-1 md:flex-none">
+                  <ShoppingCart className="h-4 w-4" />
+                  {isAdding ? "Added!" : "Add to Cart"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleWishlist} 
+                  disabled={isPending}
+                  className={`gap-2 ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50 hover:bg-rose-100" : ""}`}
+                >
+                  <Heart className={`h-4 w-4 ${wishlisted ? "fill-rose-600" : ""}`} />
+                  {wishlisted ? "Wishlisted" : "Wishlist"}
+                </Button>
+                <Button variant="outline" onClick={handleShare} className="gap-2">
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </div>
           </div>
+      )}
+
+      {/* Enquiry CTA for products without price */}
+      {!product.price && (
+        <div className="mb-6">
+          <Link href={`/enquiry?product=${encodeURIComponent(product.name)}`}>
+            <Button className="gap-2 w-full md:w-auto">
+              <MessageCircle className="h-4 w-4" />
+              Request Quotation
+            </Button>
+          </Link>
+          <div className="flex gap-3 mt-3">
+            <Button 
+              variant="outline" 
+              onClick={handleWishlist} 
+              disabled={isPending}
+              className={`gap-2 ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50 hover:bg-rose-100" : ""}`}
+            >
+              <Heart className={`h-4 w-4 ${wishlisted ? "fill-rose-600" : ""}`} />
+              {wishlisted ? "Wishlisted" : "Wishlist"}
+            </Button>
+            <Button variant="outline" onClick={handleShare} className="gap-2">
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Product Brochure */}
