@@ -8,7 +8,7 @@ import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { createOrder } from "@/app/actions/orders";
+import { createOrder, createRazorpayOrder } from "@/app/actions/orders";
 import Script from "next/script";
 
 declare global {
@@ -22,25 +22,20 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handlePayment = async (orderId: string, amount: number) => {
+  const handlePayment = async (orderId: string, razorpayOrderId: string, amount: number) => {
     const supabase = createClient();
     const res = await supabase.auth.getUser();
 
     const user = res.data.user;
 
     const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_placeholder", // Replace with actual key
-      amount: amount * 100, // Amount in paise
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: amount, // amount is already in paise from Razorpay API
       currency: "INR",
       name: "Dhomec",
       description: "Order #" + orderId,
-      order_id: "", // If using Razorpay Orders API, we'd pass the RZ Order ID here. For now, we simulate or use standard flow.
-      // For a real production app, we should create a Razorpay Order ID on the backend first!
-      // But Phase 4 requirements might just be "Integration".
-      // We will assume "Standard Checkout" for now or just capture the payment_id.
+      order_id: razorpayOrderId,
       handler: async function (response: any) {
-         // Call webhook or update order status manually if needed (webhook is safer)
-         // Here we just redirect to success
          router.push(`/orders/${orderId}/success?payment_id=${response.razorpay_payment_id}`);
          clearCart();
       },
@@ -81,22 +76,27 @@ export default function CheckoutPage() {
     };
 
     try {
-      // 1. Create Order on Backend
+      // 1. Create Razorpay Order
+      const rzpOrder = await createRazorpayOrder(totalPrice);
+
+      // 2. Create Order on Supabase
       const order = await createOrder({
         total_amount: totalPrice,
         shipping_address: shippingAddress,
-        billing_address: shippingAddress, // Same for now
+        billing_address: shippingAddress,
+        razorpay_order_id: rzpOrder.id,
       });
 
       if (!order) throw new Error("Failed to create order");
 
-      // 2. Initiate Payment
+      // 3. Initiate Payment
       if (window.Razorpay) {
-        handlePayment(order.id, totalPrice);
+        handlePayment(order.id, rzpOrder.id, rzpOrder.amount);
       } else {
         alert("Razorpay SDK failed to load. Please refresh.");
         setLoading(false);
       }
+
 
     } catch (error) {
       console.error("Checkout error:", error);
@@ -104,6 +104,7 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   };
+
 
   if (items.length === 0) {
      return (

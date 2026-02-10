@@ -3,9 +3,11 @@
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export function FloatingWhatsApp() {
   const [isVisible, setIsVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -13,6 +15,12 @@ export function FloatingWhatsApp() {
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Hide WhatsApp on admin and dashboard pages
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard")) {
+    return null;
+  }
+
 
   return (
     <Link

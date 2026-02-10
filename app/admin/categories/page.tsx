@@ -1,135 +1,117 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Layers, 
+  Image as ImageIcon,
+  Tag,
+  ArrowUpRight
+} from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  created_at: string;
-};
-
-export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    // Demo mode bypass
-    const isDemo = localStorage.getItem("dhomec_demo_auth") === "true";
-    if (isDemo) {
-        setCategories([
-            { id: '1', name: 'Boom Barriers', slug: 'boom-barriers', description: 'Traffic control barriers', created_at: new Date().toISOString() },
-            { id: '2', name: 'Turnstiles', slug: 'turnstiles', description: 'Pedestrian access', created_at: new Date().toISOString() }
-        ]);
-        setLoading(false);
-        return;
-    }
-
-    const { data, error } = await supabase.from('categories').select('*').order('created_at', { ascending: false });
-    if (!error && data) {
-        setCategories(data);
-    }
-    setLoading(false);
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-      if (!confirm(`Are you sure you want to delete ${name}?`)) return;
-      
-      const isDemo = localStorage.getItem("dhomec_demo_auth") === "true";
-      if (isDemo) {
-          alert("Delete is disabled in demo mode.");
-          return;
-      }
-      
-      await supabase.from('categories').delete().eq('id', id);
-      fetchCategories();
-  };
-
-  const filteredCategories = categories.filter(cat => 
-    cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cat.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cat.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+export default async function AdminCategoriesPage() {
+  const supabase = await createClient();
+  
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("*, products(count)")
+    .order("name", { ascending: true });
 
   return (
-    <div>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="space-y-10 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Categories</h1>
-          <p className="text-muted-foreground mt-1">Manage product categories.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Taxonomy & Categories</h1>
+          <p className="text-slate-500 mt-2 font-medium">Organize your global product distribution hierarchy</p>
         </div>
-        <Link href="/admin/categories/new">
-            <Button className="gap-2">
-            <Plus className="h-4 w-4" /> Add Category
-            </Button>
-        </Link>
+        <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 shadow-2xl shadow-slate-900/20 font-bold gap-3 group">
+          <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+          Create New Category
+        </Button>
       </div>
 
-      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
-        <div className="p-4 border-b border-border bg-muted/20 flex gap-4">
-             <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input 
-                    type="text" 
-                    placeholder="Search categories..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-             </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
-              <tr>
-                <th className="px-6 py-4 font-medium">Name</th>
-                <th className="px-6 py-4 font-medium hidden md:table-cell">Slug</th>
-                <th className="px-6 py-4 font-medium hidden lg:table-cell">Description</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
-                 <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Loading...</td></tr>
-              ) : filteredCategories.length === 0 ? (
-                 <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No categories found matching your search.</td></tr>
-              ) : (
-                filteredCategories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-6 py-4 font-medium text-foreground">{cat.name}</td>
-                    <td className="px-6 py-4 text-muted-foreground hidden md:table-cell font-mono text-xs">{cat.slug}</td>
-                    <td className="px-6 py-4 text-muted-foreground hidden lg:table-cell max-w-xs truncate">{cat.description}</td>
-                    <td className="px-6 py-4 text-right">
-                       <div className="flex justify-end gap-2">
-                          <Link href={`/admin/categories/${cat.id}`} className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit">
-                             <Edit className="h-4 w-4" />
-                          </Link>
-                          <button 
-                             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors" 
-                             title="Delete" 
-                             onClick={() => handleDelete(cat.id, cat.name)}
-                          >
-                             <Trash2 className="h-4 w-4" />
-                          </button>
-                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Stats Quick Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-600 rounded-[32px] p-8 text-white shadow-xl shadow-blue-200/50 relative overflow-hidden group">
+              <div className="relative z-10">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Total Logic Groups</p>
+                  <h3 className="text-4xl font-black">{categories?.length || 0}</h3>
+              </div>
+              <Layers className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Featured Categories</p>
+                <h3 className="text-4xl font-black text-slate-900">
+                    {categories?.filter(c => c.is_featured).length || 0}
+                </h3>
+          </div>
+          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm flex items-center justify-between group cursor-pointer hover:border-blue-200 transition-colors">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Navigation Health</p>
+                    <h3 className="text-xl font-bold text-slate-900">100% Optimized</h3>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-500 group-hover:text-white transition-all">
+                    <ArrowUpRight className="w-6 h-6" />
+                </div>
+          </div>
+      </div>
+
+      {/* Category Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {categories?.map((category) => (
+          <div key={category.id} className="bg-white rounded-[32px] overflow-hidden shadow-sm border border-slate-100 hover:shadow-2xl hover:shadow-slate-200/50 transition-all group flex flex-col">
+            <div className="h-48 bg-slate-50 relative overflow-hidden group-hover:bg-slate-100 transition-colors">
+                {category.image_url ? (
+                    <img src={category.image_url} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-200">
+                        <ImageIcon className="w-16 h-16" />
+                    </div>
+                )}
+                {category.is_featured && (
+                    <div className="absolute top-4 left-4 px-3 py-1 bg-blue-600 text-white text-[10px] font-black rounded-full shadow-lg">
+                        FEATURED
+                    </div>
+                )}
+            </div>
+            
+            <div className="p-8 flex-1 flex flex-col">
+                <div className="flex items-start justify-between mb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{category.name}</h2>
+                        <p className="text-xs font-mono text-slate-400 mt-1">/{category.slug}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-slate-400 font-black text-xs">
+                        {(category.products as any)?.[0]?.count || 0} ITEMS
+                    </div>
+                </div>
+                
+                <p className="text-sm text-slate-500 line-clamp-2 font-medium mb-8 leading-relaxed">
+                    {category.description || 'No specialized description provided for this business logic category.'}
+                </p>
+
+                <div className="mt-auto flex items-center justify-between pt-6 border-t border-slate-50">
+                    <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 hover:bg-blue-50 hover:text-blue-600 transition-all">
+                            <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 hover:bg-red-50 hover:text-red-600 transition-all">
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    </div>
+                    <Link href={`/category/${category.slug}`} target="_blank">
+                        <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 gap-2">
+                            View Live
+                            <ArrowUpRight className="w-3 h-3" />
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

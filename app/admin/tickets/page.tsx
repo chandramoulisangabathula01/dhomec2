@@ -5,10 +5,15 @@ import Link from "next/link";
 
 export default async function AdminTicketsPage() {
   const supabase = await createClient();
-  const { data: tickets } = await supabase
+  const { data: tickets, error } = await supabase
     .from("tickets")
-    .select("*, profile:profiles(email, full_name)")
+    .select("*, profile:profiles(username, full_name)")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching tickets:", error);
+  }
+
 
   return (
     <div>
@@ -33,8 +38,8 @@ export default async function AdminTicketsPage() {
               <tr key={ticket.id} className="hover:bg-slate-50">
                 <td className="p-4 font-medium text-slate-900">{ticket.subject}</td>
                 <td className="p-4">
-                  <div className="text-slate-900">{ticket.profile?.full_name || 'Unknown'}</div>
-                  <div className="text-xs text-slate-500">{ticket.profile?.email}</div>
+                  <div className="text-slate-900 font-medium">{ticket.profile?.full_name || ticket.profile?.username || 'Guest'}</div>
+                  <div className="text-xs text-slate-500">@{ticket.profile?.username || 'no-username'}</div>
                 </td>
                 <td className="p-4 capitalize">{ticket.priority}</td>
                 <td className="p-4">
@@ -45,12 +50,13 @@ export default async function AdminTicketsPage() {
                 </td>
                 <td className="p-4 text-slate-500">{new Date(ticket.created_at).toLocaleDateString()}</td>
                 <td className="p-4 text-right">
-                    <Link href={`/dashboard/tickets/${ticket.id}`}>
+                    <Link href={`/admin/tickets/${ticket.id}`}>
                         <Button variant="ghost" size="icon">
                             <MessageSquare className="w-4 h-4 text-blue-500" />
                         </Button>
                     </Link>
                 </td>
+
               </tr>
             ))}
             {tickets?.length === 0 && (

@@ -79,12 +79,12 @@ export async function getTicketDetails(ticketId: string) {
   if (error) return null;
 
   // Access Control
-  // Assuming 'profiles' table has 'role'
-  // But for now, simple user check
-  if (ticket.user_id !== user.id) {
-      // Check admin status if needed
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  
+  if (ticket.user_id !== user.id && profile?.role !== "admin") {
       return null; 
   }
+
 
   // Sort messages
   if (ticket.ticket_messages) {
@@ -99,18 +99,63 @@ export async function addMessage(ticketId: string, message: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const isStaff = profile?.role === "admin";
+
   const { error } = await supabase
     .from("ticket_messages")
     .insert({
       ticket_id: ticketId,
       user_id: user.id,
       message,
+      is_staff_reply: isStaff
     });
 
-  if (error) throw new Error("Failed to send message");
+
+  if (error) {
+    console.error("Supabase error sending message:", error);
+    throw new Error(`Failed to send message: ${error.message}`);
+  }
+
 
   // Optionally update ticket updated_at
   await supabase.from("tickets").update({ updated_at: new Date().toISOString() }).eq("id", ticketId);
 
   revalidatePath(`/dashboard/tickets/${ticketId}`);
+  revalidatePath(`/admin/tickets/${ticketId}`);
+
+  return { success: true };
 }
+
+export async function updateTicketStatus(ticketId: string, status: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+  
+    if (!user) throw new Error("Unauthorized");
+  
+    // Check if user is admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+  
+    if (profile?.role !== "admin") {
+      throw new Error("Only admins can update ticket status");
+    }
+  
+    const { error } = await supabase
+      .from("tickets")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", ticketId);
+  
+    if (error) {
+      console.error("Error updating ticket status:", error.message, error.details);
+      throw new Error(`Failed to update status: ${error.message}`);
+    }
+  
+    revalidatePath(`/admin/tickets/${ticketId}`);
+    revalidatePath("/admin/tickets");
+    return { success: true };
+}
+

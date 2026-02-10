@@ -15,9 +15,9 @@ export default async function OrdersPage() {
   const orders = await getUserOrders();
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-12">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <h1 className="text-3xl font-bold mb-8">My Orders</h1>
+    <div>
+      <h1 className="text-3xl font-bold mb-8">My Orders</h1>
+
 
         {orders.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
@@ -85,6 +85,6 @@ export default async function OrdersPage() {
             </div>
         )}
       </div>
-    </div>
-  );
+    );
 }
+

@@ -57,18 +57,18 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 Back to {product.categories?.name}
             </Link>
 
-            <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href="/products" className="hover:text-primary transition-colors">Products</Link> 
-                <span>/</span>
-                <Link href={`/products/category/${product.categories?.slug}`} className="hover:text-primary transition-colors">
+            <div className="hidden lg:flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                <Link href="/products" className="hover:text-primary transition-colors shrink-0">Products</Link> 
+                <span className="shrink-0">/</span>
+                <Link href={`/products/category/${product.categories?.slug}`} className="hover:text-primary transition-colors shrink-0">
                     {product.categories?.name}
                 </Link> 
-                <span>/</span>
-                <span className="text-foreground font-medium truncate">{product.name}</span>
+                <span className="shrink-0">/</span>
+                <span className="text-foreground font-medium truncate min-w-0">{product.name}</span>
             </div>
         </div>
 
-        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+        <div className="bg-card rounded-xl border border-border p-6 shadow-sm overflow-hidden w-full max-w-full">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
                 {/* Left: Image Gallery */}

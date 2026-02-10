@@ -29,7 +29,7 @@ export function ProductInfo({ product, className }: ProductInfoProps) {
 
   return (
     <div className={className}>
-      <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">{product.name}</h1>
+<h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2 break-words leading-tight">{product.name}</h1>
       <p className="text-lg text-primary font-medium mb-6">{product.model_name}</p>
       
       {/* Price */}
@@ -62,58 +62,57 @@ export function ProductInfo({ product, className }: ProductInfoProps) {
           </div>
       )}
 
-      {/* Specifications Table */}
       <div className="rounded-lg overflow-hidden border border-border mb-8">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
               <tbody className="divide-y divide-border">
                   {product.material && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 bg-muted/20 border-r border-border">Material</td>
-                          <td className="py-3 px-4 text-foreground">{product.material}</td>
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Material</td>
+                          <td className="py-3 px-4 text-foreground break-words">{product.material}</td>
                       </tr>
                   )}
                   {product.usage_application && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Usage/Application</td>
-                          <td className="py-3 px-4 text-foreground">{product.usage_application}</td>
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Usage/Application</td>
+                          <td className="py-3 px-4 text-foreground break-words">{product.usage_application}</td>
                       </tr>
                   )}
                   {product.color && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Color</td>
-                          <td className="py-3 px-4 text-foreground flex items-center gap-2">
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Color</td>
+                          <td className="py-3 px-4 text-foreground flex items-center gap-2 break-words">
                               <span 
-                                  className="w-5 h-5 rounded-full border border-slate-200 shadow-sm" 
+                                  className="w-5 h-5 rounded-full border border-slate-200 shadow-sm shrink-0" 
                                   style={{ backgroundColor: product.color?.toLowerCase() || 'transparent' }} 
                               />
-                              {product.color}
+                              <span className="break-words">{product.color}</span>
                           </td>
                       </tr>
                   )}
                   {product.brand && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Brand</td>
-                          <td className="py-3 px-4 text-foreground">{product.brand}</td>
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Brand</td>
+                          <td className="py-3 px-4 text-foreground break-words">{product.brand}</td>
                       </tr>
                   )}
                   {product.automation_grade && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Automation Grade</td>
-                          <td className="py-3 px-4 text-foreground">{product.automation_grade}</td>
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Automation Grade</td>
+                          <td className="py-3 px-4 text-foreground break-words">{product.automation_grade}</td>
                       </tr>
                   )}
                   {product.frequency && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Frequency</td>
-                          <td className="py-3 px-4 text-foreground flex items-center gap-2">
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Frequency</td>
+                          <td className="py-3 px-4 text-foreground break-words">
                               {product.frequency}
                           </td>
                       </tr>
                   )}
                   {product.voltage && (
                       <tr className="bg-muted/10">
-                          <td className="py-3 px-4 font-medium text-muted-foreground bg-muted/20 border-r border-border">Voltage</td>
-                          <td className="py-3 px-4 text-foreground">{product.voltage}</td>
+                          <td className="py-3 px-4 font-medium text-muted-foreground w-1/3 min-w-[120px] bg-muted/20 border-r border-border">Voltage</td>
+                          <td className="py-3 px-4 text-foreground break-words">{product.voltage}</td>
                       </tr>
                   )}
               </tbody>

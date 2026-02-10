@@ -9,6 +9,7 @@ export async function createOrder(
     shipping_address: any;
     billing_address: any;
     payment_id?: string;
+    razorpay_order_id?: string;
   }
 ) {
   const supabase = await createClient();
@@ -39,8 +40,10 @@ export async function createOrder(
       shipping_address: orderDetails.shipping_address,
       billing_address: orderDetails.billing_address,
       payment_id: orderDetails.payment_id,
+      razorpay_order_id: orderDetails.razorpay_order_id,
       status: "pending" // Initial status
     })
+
     .select()
     .single();
 
@@ -139,3 +142,29 @@ export async function getOrderById(orderId: string) {
 
     return order;
 }
+
+export async function createRazorpayOrder(amount: number) {
+    const Razorpay = require("razorpay");
+    
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        throw new Error("Razorpay keys are not configured");
+    }
+
+    const instance = new Razorpay({
+        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    try {
+        const order = await instance.orders.create({
+            amount: Math.round(amount * 100), // amount in the smallest currency unit
+            currency: "INR",
+            receipt: `receipt_order_${Date.now()}`,
+        });
+        return { id: order.id, amount: order.amount };
+    } catch (error) {
+        console.error("Razorpay order error:", error);
+        throw new Error("Failed to create Razorpay order");
+    }
+}
+

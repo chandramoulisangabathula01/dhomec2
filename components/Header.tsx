@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-import { Menu, X, Search, Briefcase, ArrowRight, ChevronRight, ChevronDown, Phone, Mail } from "lucide-react";
+import { Menu, X, Search, Briefcase, ArrowRight, ChevronRight, ChevronDown, Phone, Mail, ShoppingCart, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 
 const menuItems = [
   { name: "Home", href: "/" },
@@ -39,9 +42,13 @@ const productCategories = [
 ];
 
 export function Header() {
-
+  const { totalItems, setIsOpen: setIsCartOpen } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -51,6 +58,36 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
   
+  // Auth state
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        setProfile(profile);
+      }
+    };
+    fetchUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUser();
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.refresh();
+    router.push('/');
+  };
+
   // Lock body scroll when menu is open
   useEffect(() => {
     if (isOpen) {
@@ -65,7 +102,6 @@ export function Header() {
 
   return (
     <>
-      {/* Top Bar - Hidden on mobile, visible on desktop to match style */}
       <div className="hidden lg:block bg-white text-slate-600 border-b border-slate-100/50">
         <div className="container-width py-2 flex items-center justify-end gap-6 text-xs font-medium">
             <a href="tel:+919876543210" className="flex items-center hover:text-red-600 transition-colors">
@@ -82,14 +118,12 @@ export function Header() {
           scrolled ? "shadow-md py-2" : "py-4 md:py-5"
       )}>
         <div className="container-width flex items-center justify-between">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2 z-20">
             <span className="text-2xl font-bold tracking-tight text-slate-900">
                 dhomec<span className="text-red-600">•</span>
             </span>
             </Link>
 
-            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-700">
                 {menuItems.map((item) => (
                     item.hasDropdown ? (
@@ -102,7 +136,6 @@ export function Header() {
                                 <ChevronDown className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-180" />
                             </Link>
                             
-                            {/* Mega Menu Dropdown */}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 w-[900px] bg-white border-t-2 border-red-600 shadow-2xl rounded-b-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-4 group-hover:translate-y-0 z-50">
                                 <div className="p-8 grid grid-cols-4 gap-8">
                                     {productCategories.map((cat, idx) => (
@@ -128,14 +161,6 @@ export function Header() {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="bg-slate-50 p-4 rounded-b-xl border-t border-slate-100 flex justify-between items-center px-8">
-                                    <span className="text-xs text-slate-500 font-medium">
-                                        Innovative Automation Solutions by Dhomec
-                                    </span>
-                                    <Link href="/products" className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center">
-                                        View All Products <ArrowRight className="h-3 w-3 ml-1" />
-                                    </Link>
-                                </div>
                             </div>
                         </div>
                     ) : (
@@ -151,35 +176,90 @@ export function Header() {
                 ))}
             </nav>
 
-            {/* Right Actions */}
             <div className="hidden lg:flex items-center gap-4">
-            <Link href="/portfolio" className="flex items-center gap-2 text-sm font-medium hover:text-red-600 transition-colors px-2">
-                <Briefcase className="h-4 w-4 text-red-600" />
-                Portfolio
-            </Link>
-            <Link href="/contact">
-                <Button className="bg-[#D92D20] hover:bg-[#b02419] text-white rounded-sm px-6 font-medium h-10 shadow-lg shadow-red-600/20 transition-transform active:scale-95">
-                    Contact us
-                </Button>
-            </Link>
-            <button className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600">
-                <Search className="h-5 w-5" />
-            </button>
-            <button className="p-2 hover:bg-slate-100 rounded-full transition-colors text-sm font-medium text-slate-600">
-                EN
-            </button>
+                {/* Cart Button */}
+                <button 
+                  onClick={() => setIsCartOpen(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 relative"
+                >
+                    <ShoppingCart className="h-5 w-5" />
+                    {totalItems > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                            {totalItems}
+                        </span>
+                    )}
+                </button>
+
+                {/* Profile Dropdown */}
+                <div className="relative group">
+                    <button className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600">
+                        <User className="h-5 w-5" />
+                    </button>
+                    <div className="absolute right-0 top-full pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                        <div className="bg-white border rounded-lg shadow-xl w-48 overflow-hidden">
+                            {user ? (
+                                <>
+                                    <div className="p-3 border-b bg-slate-50">
+                                        <p className="text-xs font-bold text-slate-900 truncate">{profile?.full_name || 'My Account'}</p>
+                                        <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                                    </div>
+                                    <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-red-600">
+                                        <LayoutDashboard className="h-4 w-4" /> My Dashboard
+                                    </Link>
+                                    {profile?.role === 'admin' && (
+                                        <Link href="/admin" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-red-600 font-bold border-t">
+                                            <Briefcase className="h-4 w-4" /> Admin Panel
+                                        </Link>
+                                    )}
+                                    <button 
+                                        onClick={handleSignOut}
+                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t"
+                                    >
+                                        <LogOut className="h-4 w-4" /> Sign Out
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href="/login" className="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-red-600 font-medium">
+                                        Login
+                                    </Link>
+                                    <Link href="/signup" className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold">
+                                        Create Account
+                                    </Link>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <Link href="/contact" className="ml-2">
+                    <Button className="bg-[#D92D20] hover:bg-[#b02419] text-white rounded-sm px-6 font-medium h-10 shadow-lg shadow-red-600/20">
+                        Contact us
+                    </Button>
+                </Link>
             </div>
 
-            {/* Mobile Toggle */}
-            <button 
-                className="lg:hidden p-2 text-slate-700"
-                onClick={() => setIsOpen(true)}
-            >
-            <Menu className="h-6 w-6" />
-            </button>
+            <div className="lg:hidden flex items-center gap-2">
+                <button 
+                  onClick={() => setIsCartOpen(true)}
+                  className="p-2 text-slate-700 relative"
+                >
+                    <ShoppingCart className="h-6 w-6" />
+                    {totalItems > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                            {totalItems}
+                        </span>
+                    )}
+                </button>
+                <button 
+                    className="p-2 text-slate-700"
+                    onClick={() => setIsOpen(true)}
+                >
+                <Menu className="h-6 w-6" />
+                </button>
+            </div>
         </div>
 
-        {/* Mobile Slide Menu */}
         <div className={cn(
             "fixed inset-0 z-[60] bg-white transition-transform duration-300 transform flex flex-col lg:hidden",
             isOpen ? "translate-x-0" : "translate-x-full"
@@ -206,17 +286,52 @@ export function Header() {
                             <ChevronRight className="h-5 w-5 text-slate-400" />
                         </Link>
                     ))}
+                    {user ? (
+                        <>
+                            <Link 
+                                href="/dashboard"
+                                onClick={() => setIsOpen(false)}
+                                className="text-xl font-bold text-red-600 py-3 border-b border-slate-100 flex items-center justify-between"
+                            >
+                                My Dashboard
+                                <ChevronRight className="h-5 w-5 text-slate-400" />
+                            </Link>
+                            {profile?.role === 'admin' && (
+                                <Link 
+                                    href="/admin"
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-xl font-bold text-slate-900 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 px-2 rounded"
+                                >
+                                    Admin Panel
+                                    <Briefcase className="h-5 w-5 text-red-600" />
+                                </Link>
+                            )}
+                            <button 
+                                onClick={() => { handleSignOut(); setIsOpen(false); }}
+                                className="text-xl font-medium text-red-600 py-3 text-left"
+                            >
+                                Sign Out
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <Link 
+                                href="/login"
+                                onClick={() => setIsOpen(false)}
+                                className="text-xl font-medium text-slate-800 py-3 border-b border-slate-100 flex items-center justify-between"
+                            >
+                                Login
+                                <ChevronRight className="h-5 w-5 text-slate-400" />
+                            </Link>
+                        </>
+                    )}
                 </nav>
                 
-                <div className="mt-4 space-y-4">
+                <div className="mt-4">
                     <Link href="/contact" onClick={() => setIsOpen(false)} className="block">
                         <Button className="w-full bg-[#D92D20] hover:bg-[#b02419] text-white h-12 text-lg shadow-lg shadow-red-600/20">
                             Contact Us
                         </Button>
-                    </Link>
-                    <Link href="/portfolio" onClick={() => setIsOpen(false)} className="flex items-center justify-center gap-2 text-slate-600 font-medium py-3">
-                        <Briefcase className="h-4 w-4 text-red-600" />
-                        View Portfolio
                     </Link>
                 </div>
             </div>
@@ -225,3 +340,4 @@ export function Header() {
     </>
   );
 }
+

@@ -1,6 +1,6 @@
 import { login } from "./actions";
 import Link from "next/link";
-
+import { Mail, Lock, ArrowRight, ShieldCheck, Home } from "lucide-react";
 
 export default async function LoginPage({
   searchParams,
@@ -10,80 +10,120 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
-            Or{" "}
-            <Link
-              href="/signup"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              start your 14-day free trial
-            </Link>
+    <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC] px-4 py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-400" />
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-50" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-100 rounded-full blur-3xl opacity-50" />
+
+      <div className="w-full max-w-[440px] z-10">
+        <div className="text-center mb-10">
+          <Link href="/" className="inline-flex items-center gap-2 mb-8 px-4 py-2 bg-white rounded-full text-sm font-medium text-slate-600 shadow-sm border border-slate-100 hover:shadow-md transition-all group">
+            <Home className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            <span>Back to storefront</span>
+          </Link>
+          <div className="flex justify-center mb-6">
+            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-200 rotate-3">
+              <ShieldCheck className="w-8 h-8 text-white -rotate-3" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Welcome Back
+          </h1>
+          <p className="mt-2 text-slate-500 font-medium">
+            Enter your credentials to access your account
           </p>
         </div>
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Authentication Error
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
+        <div className="bg-white p-8 sm:p-10 rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100">
+          {error && (
+            <div className="mb-6 rounded-2xl bg-red-50 p-4 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex gap-3">
+                <div className="mt-0.5 text-red-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="21" cy="6" r="3"/><path d="M11 6V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1"/><path d="M11 11H3"/><path d="M12 11h2"/><path d="M7 11V7"/><path d="M7 15v1"/><path d="M13 15v2"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-red-900">Sign in failed</h3>
+                  <p className="text-xs text-red-700 mt-1">{error as string}</p>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <form className="mt-8 space-y-6" action={login}>
-          <div className="-space-y-px rounded-md shadow-sm">
-            <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full rounded-t-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 pl-3"
-                placeholder="Email address"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="relative block w-full rounded-b-md border-0 py-1.5 text-slate-900 ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 pl-3"
-                placeholder="Password"
-              />
-            </div>
-          </div>
+          <form className="space-y-6" action={login}>
+            <div className="space-y-5">
+              <div>
+                <label htmlFor="email-address" className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+                  Email Address
+                </label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="block w-full rounded-2xl border-slate-200 py-3.5 pl-11 pr-4 text-slate-900 shadow-sm focus:border-blue-500 focus:ring-[4px] focus:ring-blue-500/10 sm:text-sm bg-slate-50 border transition-all placeholder:text-slate-400"
+                    placeholder="name@company.com"
+                  />
+                </div>
+              </div>
 
-          <div>
+              <div>
+                <div className="flex items-center justify-between mb-2 ml-1">
+                  <label htmlFor="password" className="block text-sm font-bold text-slate-700">
+                    Password
+                  </label>
+                  <Link
+                    href="/login/forgot-password"
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    className="block w-full rounded-2xl border-slate-200 py-3.5 pl-11 pr-4 text-slate-900 shadow-sm focus:border-blue-500 focus:ring-[4px] focus:ring-blue-500/10 sm:text-sm bg-slate-50 border transition-all placeholder:text-slate-400"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-4 text-sm font-bold text-white shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-[0.98] transition-all group"
             >
-              Sign in
+              Sign In
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
+          </form>
+
+          <div className="mt-8 pt-8 border-t border-slate-100 text-center">
+            <p className="text-sm text-slate-500 font-medium">
+              Don't have an account?{" "}
+              <Link
+                href="/signup"
+                className="text-blue-600 font-bold hover:text-blue-700"
+              >
+                Create an account
+              </Link>
+            </p>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
 }
+
