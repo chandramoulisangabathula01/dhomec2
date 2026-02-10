@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -40,27 +41,52 @@ export async function POST(req: NextRequest) {
       case "payment.captured":
       case "order.paid": {
         const payload = event.payload.payment?.entity || event.payload.order?.entity;
-        const razorpayOrderId = payload.order_id || payload.id;
-        const paymentId = payload.payment_id || payload.id;
+        // In some events payload is direct entity, sometimes nested. 
+        // Razorpay structure varies slightly by event type.
+        // payment.captured -> payload.payment.entity
+        // order.paid -> payload.order.entity
         
-        // Find order by Razorpay Order ID or from notes
-        const orderId = payload.notes?.order_id;
+        let paymentId = payload.id;
+        let razorpayOrderId = payload.order_id;
+        let orderId = payload.notes?.order_id;
+
+        if (!orderId && razorpayOrderId) {
+            // Fallback: try to find by razorpay_order_id if notes missing
+             const { data: existing } = await supabase
+                .from("orders")
+                .select("id")
+                .eq("razorpay_order_id", razorpayOrderId)
+                .single();
+             if (existing) orderId = existing.id;
+        }
         
         if (orderId) {
-          const { data, error } = await supabase
+          console.log(`[Webhook] Updating order ${orderId} to PLACED`);
+          const { error } = await supabase
             .from("orders")
             .update({ 
-              status: "paid", 
-              payment_id: paymentId 
+              status: "PLACED", 
+              razorpay_payment_id: paymentId,
+              updated_at: new Date().toISOString()
             })
-            .eq("id", orderId)
-            .select();
+            .eq("id", orderId);
             
           if (error) {
             console.error(`[Webhook] Error updating order ${orderId}:`, error);
           } else {
-            console.log(`[Webhook] Order ${orderId} updated to 'paid'`);
+            // Audit Log
+            await supabase.from("order_status_history").insert({
+                order_id: orderId,
+                status: "PLACED",
+                changed_by: null // System/Webhook
+            });
+            console.log(`[Webhook] Order ${orderId} updated to 'PLACED'`);
+            revalidatePath("/dashboard/orders");
+            revalidatePath(`/orders/${orderId}`);
+            revalidatePath("/admin/orders");
           }
+        } else {
+             console.warn(`[Webhook] Could not find order ID for event ${event.id}`);
         }
         break;
       }
@@ -72,15 +98,24 @@ export async function POST(req: NextRequest) {
         if (orderId) {
           await supabase
             .from("orders")
-            .update({ status: "cancelled" }) // Or 'failed' if that's a status
+            .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
             .eq("id", orderId);
-          console.log(`[Webhook] Order ${orderId} marked as cancelled due to payment failure`);
+            
+          await supabase.from("order_status_history").insert({
+                order_id: orderId,
+                status: "CANCELLED",
+                changed_by: null
+          });
+          console.log(`[Webhook] Order ${orderId} marked as CANCELLED due to payment failure`);
+          revalidatePath("/dashboard/orders");
+          revalidatePath(`/orders/${orderId}`);
+          revalidatePath("/admin/orders");
         }
         break;
       }
 
       case "payment.authorized": {
-        console.log(`[Webhook] Payment authorized: ${event.payload.payment.entity.id}`);
+        console.log(`[Webhook] Payment authorized: ${event.payload.payment?.entity?.id}`);
         break;
       }
 

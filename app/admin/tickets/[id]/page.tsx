@@ -45,7 +45,7 @@ export default function AdminTicketDetailsPage() {
             table: 'tickets',
             filter: `id=eq.${id}`
         }, (payload) => {
-            setTicket(prev => prev ? { ...prev, status: payload.new.status } : null);
+            setTicket((prev: Ticket | null) => prev ? { ...prev, status: payload.new.status } : null);
         })
         .subscribe();
 

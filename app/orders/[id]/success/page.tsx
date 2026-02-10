@@ -30,16 +30,26 @@ export default async function OrderSuccessPage({
     
     const supabase = await createClient();
 
-    // Update order with payment ID if provided
+    // Update order with payment ID and PLACED status if provided
     if (paymentId) {
       const { error: updateError } = await supabase
         .from("orders")
-        .update({ payment_id: paymentId, status: "paid" })
+        .update({ 
+            razorpay_payment_id: paymentId, 
+            status: "PLACED",
+            updated_at: new Date().toISOString()
+        })
         .eq("id", id);
         
       if (updateError) {
           console.error("Failed to update payment info:", updateError);
-          // We don't throw here to still show order details if possible
+      } else {
+          // Add audit log for payment success
+          await supabase.from("order_status_history").insert({
+              order_id: id,
+              status: "PLACED",
+              changed_by: (await supabase.auth.getUser()).data.user?.id
+          });
       }
     }
 
@@ -53,7 +63,7 @@ export default async function OrderSuccessPage({
         )
       `)
       .eq("id", id)
-      .maybeSingle(); // Use maybeSingle to avoid 406/JSON errors if not found
+      .maybeSingle(); 
 
     if (error) {
       console.error("Order fetch error:", error);
@@ -100,7 +110,7 @@ export default async function OrderSuccessPage({
     );
   }
 
-  // Safely parse shipping address
+  // Safely parse shipping address logic...
   let shippingAddress: any = null;
   try {
     if (order.shipping_address) {
@@ -114,7 +124,6 @@ export default async function OrderSuccessPage({
     console.warn("Failed to parse shipping address", e);
   }
 
-  // Robust checks for formatting
   const formattedTotal = order.total_amount 
     ? Number(order.total_amount).toLocaleString("en-IN") 
     : "0";
@@ -150,18 +159,18 @@ export default async function OrderSuccessPage({
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {order.status === "paid" ? "Payment Confirmed" : "Processing"}
+                  {order.status === "PLACED" ? "Payment Confirmed" : order.status}
                 </span>
               </div>
             </div>
-            {paymentId && (
+            {(paymentId || order.razorpay_payment_id) && (
               <p className="text-xs text-slate-400 mt-3">
-                Payment ID: <span className="font-mono">{paymentId}</span>
+                Payment ID: <span className="font-mono">{paymentId || order.razorpay_payment_id}</span>
               </p>
             )}
           </div>
 
-          {/* Order Items */}
+          {/* Items section ... (omitted similar code for brevity, but needed here) */}
           <div className="px-8 py-6 space-y-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Items Ordered</h3>
             {Array.isArray(order.order_items) && order.order_items.map((item: any) => {
@@ -219,7 +228,7 @@ export default async function OrderSuccessPage({
           {/* Actions */}
           <div className="px-8 py-6 flex flex-col sm:flex-row gap-3">
             <Link
-              href="/dashboard/orders"
+              href="/orders"
               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
             >
               <Package className="w-4 h-4" />
@@ -232,6 +241,15 @@ export default async function OrderSuccessPage({
               <Home className="w-4 h-4" />
               Continue Shopping
             </Link>
+          </div>
+          <div className="px-8 pb-6">
+             <Link 
+                href={`https://wa.me/?text=I%20just%20placed%20an%20order%20on%20Dhomec!%20Order%20ID:%20${order.id}`}
+                target="_blank"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] text-white rounded-2xl text-sm font-bold hover:bg-[#128C7E] transition-colors shadow-lg shadow-green-200"
+             >
+                 <span className="font-bold">Share on WhatsApp</span>
+             </Link>
           </div>
         </div>
 
@@ -263,4 +281,3 @@ export default async function OrderSuccessPage({
     </div>
   );
 }
-

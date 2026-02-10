@@ -13,13 +13,21 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminOrdersPage() {
   const supabase = await createClient();
   
-  const { data: orders } = await supabase
+  const { data: orders, error } = await supabase
     .from("orders")
-    .select("*, profile:profiles(email, full_name)")
+    .select("*, profile:profiles(full_name)")
     .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching admin orders:", error);
+  } else {
+    console.log(`Admin fetched ${orders?.length} orders`);
+  }
 
   const totalRevenue = orders?.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
 
@@ -102,10 +110,19 @@ export default async function AdminOrdersPage() {
                     </div>
                 </td>
                 <td className="p-6">
-                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest
-                        ${order.status === 'paid' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
-                        {order.status}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest w-fit
+                            ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' : 
+                              order.status === 'CANCELLED' ? 'bg-red-100 text-red-700' :
+                              order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-700' :
+                              order.status === 'PENDING_PAYMENT' ? 'bg-amber-100 text-amber-700' :
+                              order.status === 'RETURN_REJECTED' ? 'bg-rose-100 text-rose-700' :
+                              order.status.includes('RETURN') ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                              'bg-slate-100 text-slate-600'}`}>
+                            {mapStatus(order.status)}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Code: {order.status}</span>
+                    </div>
                 </td>
                 <td className="p-6 text-right">
                     <Link href={`/admin/orders/${order.id}`}>
@@ -131,5 +148,22 @@ export default async function AdminOrdersPage() {
       </div>
     </div>
   );
+}
+
+function mapStatus(status: string) {
+    const map: Record<string, string> = {
+        'PENDING_PAYMENT': 'Payment Waiting',
+        'PLACED': 'Placed',
+        'ACCEPTED': 'Accepted',
+        'PACKED': 'Ready',
+        'SHIPPED': 'Shipped',
+        'DELIVERED': 'Delivered',
+        'CANCELLED': 'Cancelled',
+        'RETURN_REQUESTED': 'Return Req',
+        'RETURN_APPROVED': 'Return Appr',
+        'RETURN_REJECTED': 'Return Denied',
+        'REFUNDED': 'Refunded'
+    };
+    return map[status.toUpperCase()] || status;
 }
 

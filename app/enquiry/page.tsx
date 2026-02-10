@@ -4,15 +4,27 @@ import { useState, useEffect, Suspense } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Loader2, 
+  MessageSquare, 
+  ShieldCheck, 
+  Clock, 
+  Briefcase, 
+  Contact, 
+  CheckCircle2,
+  Sparkles,
+  ChevronRight,
+  Globe
+} from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { useSearchParams } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { useSearchParams, useRouter } from "next/navigation";
 
 function EnquiryContent() {
   const searchParams = useSearchParams();
-// ... existing imports
-
+  const router = useRouter();
+  const supabase = createClient();
   const productName = searchParams.get('product') || "";
   
   const [loading, setLoading] = useState(false);
@@ -23,18 +35,12 @@ function EnquiryContent() {
       name: "",
       phone: "",
       company: "",
-      message: productName ? `I'm interested in ${productName}` : ""
+      message: productName ? `Consultation regarding ${productName}` : ""
   });
-
-  // Focus name on mount
-  useEffect(() => {
-     const input = document.getElementById("name");
-     if (input) input.focus();
-  }, []);
 
   useEffect(() => {
     if (productName) {
-        setFormData(prev => ({ ...prev, message: `I'm interested in ${productName}` }));
+        setFormData(prev => ({ ...prev, message: `Consultation regarding ${productName}` }));
     }
   }, [productName]);
 
@@ -45,9 +51,13 @@ function EnquiryContent() {
       setSuccess(false);
 
       try {
+          // Check if user is logged in to associate user_id if possible
+          const { data: { user } } = await supabase.auth.getUser();
+
           const { error: insertError } = await supabase
               .from('enquiries')
               .insert([{
+                  user_id: user?.id || null, // Optional user association
                   name: formData.name,
                   phone: formData.phone,
                   company: formData.company || null,
@@ -59,134 +69,234 @@ function EnquiryContent() {
           if (insertError) throw insertError;
 
           setSuccess(true);
-          // Reset form
-          setFormData({
-              name: "",
-              phone: "",
-              company: "",
-              message: ""
-          });
+          setFormData({ name: "", phone: "", company: "", message: "" });
+          
+          // Smooth scroll to top to see success message
+          window.scrollTo({ top: 0, behavior: 'smooth' });
 
-          // Auto-hide success message after 5 seconds
-          setTimeout(() => setSuccess(false), 5000);
+          // Redirect to dashboard after a delay if logged in
+          if (user) {
+              setTimeout(() => {
+                  router.push('/dashboard');
+              }, 6000);
+          }
 
       } catch (err: any) {
           console.error("Error submitting enquiry:", err);
-          setError(err.message || "Failed to submit enquiry. Please try again.");
+          setError(err.message || "Protocol communication failure. Please retry.");
       } finally {
           setLoading(false);
       }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="md:hidden p-4 border-b bg-white sticky top-0 z-40 flex items-center gap-4 shadow-sm">
-         <Link href="/"><ArrowLeft className="h-6 w-6 text-slate-600" /></Link>
-         <span className="font-bold text-lg text-[var(--color-brand-dark)]">Request Enquiry</span>
-      </div>
-      
-      <div className="hidden md:block">
-         <Header />
-      </div>
+    <div className="min-h-screen bg-white flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
+      <Header />
 
-      <main className="flex-1 container-width py-8 md:py-16">
-         <div className="max-w-xl mx-auto bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-slate-100">
-             <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-brand-dark)] mb-2">Get a Quote</h1>
-             <p className="text-slate-500 mb-8">Tell us about your requirement. Usually responds in 2 hours.</p>
-
-             {error && (
-                 <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100">
-                     <span className="font-bold">⚠️ Error:</span> {error}
-                 </div>
-             )}
-
-             {success && (
-                 <div className="mb-6 p-4 bg-green-50 text-green-600 rounded-lg text-sm border border-green-100 font-bold">
-                     ✅ Thank you! Your enquiry has been submitted. We'll contact you within 2 hours.
-                 </div>
-             )}
-
-             <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="name">Full Name</label>
-                   <input
-                       id="name" 
-                       required 
-                       type="text" 
-                       className="block w-full rounded-lg border-slate-300 py-3 px-4 text-base focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-slate-50 outline-none border hover:border-[var(--color-primary)] transition-colors"
-                       placeholder="e.g. Rahul Sharma"
-                       value={formData.name}
-                       onChange={e => setFormData({...formData, name: e.target.value})}
-                   />
+      <main className="flex-1 overflow-hidden">
+         {/* Hero Section */}
+         <section className="relative py-20 bg-slate-900 overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(59,130,246,0.1),transparent_50%)]" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 blur-[120px] rounded-full -mr-64 -mt-64" />
+            
+            <div className="container-width relative z-10 px-4">
+                <div className="max-w-3xl">
+                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-[0.2em] mb-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                        <Sparkles className="w-3 h-3" />
+                        Professional Consultation
+                     </div>
+                     <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        Strategic <span className="text-blue-500 italic">Excellence.</span><br/>
+                        Request Consultation.
+                     </h1>
+                     <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        Connect with our engineering team for high-level infrastructure solutions and product specifications. Most sequences are processed within 120 minutes.
+                     </p>
                 </div>
+            </div>
+         </section>
+
+         <div className="container-width px-4 py-20 -mt-12 relative z-20">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
                 
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="phone">Phone Number</label>
-                   <input 
-                       id="phone"
-                       required 
-                       type="tel" 
-                       className="block w-full rounded-lg border-slate-300 py-3 px-4 text-base focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-slate-50 outline-none border hover:border-[var(--color-primary)] transition-colors"
-                       placeholder="+91 98765 43210"
-                       value={formData.phone}
-                       onChange={e => setFormData({...formData, phone: e.target.value})}
-                   />
+                {/* Information Sidebar */}
+                <div className="space-y-8">
+                    <div className="bg-slate-50 p-10 rounded-[40px] border border-slate-100 space-y-10 shadow-sm">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-blue-500" />
+                            CONSULTATION PROTOCOLS
+                        </h3>
+                        
+                        <div className="space-y-8">
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
+                                    <Clock className="w-5 h-5 text-slate-900" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">Response Latency</p>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Average confirmation window is 2.4 hours during standard operational cycles.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
+                                    <Briefcase className="w-5 h-5 text-slate-900" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">Corporate Triage</p>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Bulk procurement and B2B requirements receive high-priority routing.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
+                                    <Globe className="w-5 h-5 text-slate-900" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">Global Coverage</p>
+                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">Providing consultation for infrastructure projects across the region.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-10 border-t border-slate-200">
+                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 px-2">Current Interest</p>
+                             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
+                                <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
+                                    <MessageSquare className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[11px] font-black text-slate-900 mb-0.5 uppercase tracking-tighter truncate">
+                                        {productName || "General Consultation"}
+                                    </p>
+                                    <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Active Selector</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="company">Company Name</label>
-                   <input 
-                       id="company"
-                       type="text" 
-                       className="block w-full rounded-lg border-slate-300 py-3 px-4 text-base focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-slate-50 outline-none border hover:border-[var(--color-primary)] transition-colors"
-                       placeholder="Your Company"
-                       value={formData.company}
-                       onChange={e => setFormData({...formData, company: e.target.value})}
-                   />
-                </div>
-                
-                <div>
-                   <label className="block text-sm font-medium text-slate-700 mb-1" htmlFor="message">Requirements</label>
-                   <textarea 
-                       id="message"
-                       rows={3} 
-                       className="block w-full rounded-lg border-slate-300 py-3 px-4 text-base focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-slate-50 outline-none border hover:border-[var(--color-primary)] transition-colors resize-none"
-                       placeholder="I'm interested in..."
-                       value={formData.message}
-                       onChange={e => setFormData({...formData, message: e.target.value})}
-                   />
-                </div>
+                {/* Form Section */}
+                <div className="lg:col-span-2 bg-white p-8 md:p-16 rounded-[48px] border border-slate-100 shadow-2xl shadow-slate-100">
+                    {success ? (
+                         <div className="text-center py-20 space-y-6 animate-in fade-in zoom-in duration-700">
+                            <div className="w-24 h-24 bg-green-50 rounded-[32px] flex items-center justify-center mx-auto border border-green-100 shadow-lg shadow-green-50">
+                                <CheckCircle2 className="w-10 h-10 text-green-600" />
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-3xl font-black text-slate-900">Enquiry Transmitted.</h2>
+                                <p className="text-slate-500 font-medium">Your sequence has been logged in our central register. Stay alert for a communication ping.</p>
+                            </div>
+                            <Link href="/">
+                                <Button className="mt-8 rounded-2xl bg-slate-900 text-white h-14 px-10 font-black uppercase tracking-widest text-xs">
+                                    Return to Home <ChevronRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </Link>
+                         </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-12">
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Full Identity Vector</label>
+                                        <div className="relative group">
+                                            <Contact className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                            <input 
+                                                required
+                                                type="text"
+                                                placeholder="e.g. Victor Engineering"
+                                                value={formData.name}
+                                                onChange={e => setFormData({...formData, name: e.target.value})}
+                                                className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl pl-14 pr-6 font-bold text-slate-900 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Secure Contact Sequence</label>
+                                        <div className="relative group">
+                                            <Globe className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                            <input 
+                                                required
+                                                type="tel"
+                                                placeholder="+91 000 000 0000"
+                                                value={formData.phone}
+                                                onChange={e => setFormData({...formData, phone: e.target.value})}
+                                                className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl pl-14 pr-6 font-bold text-slate-900 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
-                <div className="pt-4">
-                   <Button size="lg" className="w-full text-lg h-14 font-bold" type="submit" disabled={loading}>
-                      {loading ? (
-                          <>
-                              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                              Submitting...
-                          </>
-                      ) : (
-                          "Send Enquiry"
-                      )}
-                   </Button>
-                   <p className="text-xs text-center text-slate-400 mt-4">
-                      By submitting, you agree to our privacy policy.
-                   </p>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Organizational Entity (Optional)</label>
+                                    <div className="relative group">
+                                        <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                        <input 
+                                            type="text"
+                                            placeholder="Company Name"
+                                            value={formData.company}
+                                            onChange={e => setFormData({...formData, company: e.target.value})}
+                                            className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl pl-14 pr-6 font-bold text-slate-900 transition-all outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Consultation Requirements</label>
+                                    <textarea 
+                                        rows={4}
+                                        required
+                                        placeholder="Outline your strategic requirements here..."
+                                        value={formData.message}
+                                        onChange={e => setFormData({...formData, message: e.target.value})}
+                                        className="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl p-6 font-bold text-slate-900 transition-all outline-none resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="p-5 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600">
+                                    <ShieldCheck className="w-5 h-5" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">{error}</p>
+                                </div>
+                            )}
+
+                            <div className="pt-6 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-6">
+                                <div className="flex items-center gap-4 text-slate-400">
+                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Gateway Verified</span>
+                                </div>
+                                <Button 
+                                    disabled={loading}
+                                    className="w-full md:w-auto h-16 px-12 bg-slate-900 hover:bg-black text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all active:scale-95 disabled:opacity-50 gap-3"
+                                >
+                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                                    {loading ? "Transmitting..." : "Initiate Consultation"}
+                                </Button>
+                            </div>
+                        </form>
+                    )}
                 </div>
-             </form>
+            </div>
          </div>
       </main>
       
-      <div className="hidden md:block">
-         <Footer />
-      </div>
+      <Footer />
     </div>
   );
 }
 
 export default function Enquiry() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={
+        <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center gap-6 text-white font-black uppercase tracking-[0.3em] text-xs">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+            Authenticating Environment...
+        </div>
+    }>
       <EnquiryContent />
     </Suspense>
   );
 }
+

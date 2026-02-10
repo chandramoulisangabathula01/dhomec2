@@ -98,9 +98,17 @@ export function EnquiriesClient({ enquiries }: { enquiries: any[] }) {
                   <span className="flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5" /> {enquiry.phone}
                   </span>
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" /> {enquiry.email || 'No Email'}
+                  </span>
                   {enquiry.company && (
                     <span className="flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5" /> {enquiry.company}
+                    </span>
+                  )}
+                  {enquiry.subject && (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded text-[10px] uppercase font-black">
+                      {enquiry.subject}
                     </span>
                   )}
                   {enquiry.product_interest && (

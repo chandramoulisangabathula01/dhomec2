@@ -1,11 +1,63 @@
 "use client";
 
+import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Header } from "@/components/Header";
 import { FooterModern } from "@/components/landing/FooterModern";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 import { companyInfo } from "@/lib/data/footer";
 
 export default function ContactPage() {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    subject: "Sales Enquiry",
+    message: ""
+  });
+
+  const supabase = createClient();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const { error: insertError } = await supabase
+        .from('enquiries')
+        .insert([{
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          status: 'new'
+        }]);
+
+      if (insertError) throw insertError;
+
+      setSuccess(true);
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        subject: "Sales Enquiry",
+        message: ""
+      });
+    } catch (err: any) {
+      console.error("Contact form error:", err);
+      setError(err.message || "Failed to transmit message. Technical interference detected.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900">
       <Header />
@@ -112,23 +164,68 @@ export default function ContactPage() {
                 <div className="lg:col-span-2">
                     <div className="bg-white p-8 md:p-10 rounded-xl border border-slate-100 shadow-xl">
                         <h2 className="text-2xl font-bold text-slate-900 mb-6">Send us a Message</h2>
-                        <form className="space-y-6">
+                        
+                        {success && (
+                            <div className="mb-8 p-6 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-4 animate-in fade-in zoom-in">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                                <div>
+                                    <h4 className="font-bold text-emerald-900">Message Transmitted</h4>
+                                    <p className="text-sm text-emerald-700">Protocol successful. Our agents will synchronize with you shortly.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="mb-8 p-6 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-4 animate-in fade-in zoom-in">
+                                <AlertCircle className="w-8 h-8 text-rose-600" />
+                                <div>
+                                    <h4 className="font-bold text-rose-900">Transmission Error</h4>
+                                    <p className="text-sm text-rose-700">{error}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Full Name</label>
-                                    <input placeholder="John Doe" className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-red-500" />
+                                    <input 
+                                        required
+                                        value={formData.name}
+                                        onChange={e => setFormData({...formData, name: e.target.value})}
+                                        placeholder="John Doe" 
+                                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all" 
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Phone Number</label>
-                                    <input placeholder="+91 98765 43210" className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-red-500" />
+                                    <input 
+                                        required
+                                        type="tel"
+                                        value={formData.phone}
+                                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                                        placeholder="+91 98765 43210" 
+                                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all" 
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Email Address</label>
-                                    <input placeholder="john@example.com" type="email" className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-red-500" />
+                                    <input 
+                                        required
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={e => setFormData({...formData, email: e.target.value})}
+                                        placeholder="john@example.com" 
+                                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all" 
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">Subject</label>
-                                    <select className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-red-500">
+                                    <select 
+                                        value={formData.subject}
+                                        onChange={e => setFormData({...formData, subject: e.target.value})}
+                                        className="flex h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                                    >
                                         <option>Sales Enquiry</option>
                                         <option>Technical Support</option>
                                         <option>Partnership</option>
@@ -140,13 +237,21 @@ export default function ContactPage() {
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700">Message</label>
                                 <textarea 
+                                    required
+                                    value={formData.message}
+                                    onChange={e => setFormData({...formData, message: e.target.value})}
                                     placeholder="How can we help you?" 
-                                    className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 focus:border-red-500" 
+                                    className="flex min-h-[120px] w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none" 
                                 />
                             </div>
 
-                            <button className="w-full bg-[#D92D20] hover:bg-[#b02419] text-white h-12 rounded-sm font-bold text-lg shadow-lg shadow-red-600/20 transition-all">
-                                Send Message
+                            <button 
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-[#D92D20] hover:bg-[#b02419] text-white h-14 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-red-600/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+                                {loading ? "Transmitting..." : "Send Message"}
                             </button>
                         </form>
                     </div>
