@@ -7,10 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Send, ArrowLeft, User, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
+interface Ticket {
+  id: string;
+  subject: string;
+  status: string;
+  priority: string;
+  created_at: string;
+  user_id: string;
+  ticket_messages?: any[];
+  [key: string]: any;
+}
+
 export default function AdminTicketDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [ticket, setTicket] = useState<any>(null);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -34,7 +45,7 @@ export default function AdminTicketDetailsPage() {
             table: 'tickets',
             filter: `id=eq.${id}`
         }, (payload) => {
-            setTicket(prev => ({ ...prev, status: payload.new.status }));
+            setTicket(prev => prev ? { ...prev, status: payload.new.status } : null);
         })
         .subscribe();
 
@@ -60,7 +71,7 @@ export default function AdminTicketDetailsPage() {
     setStatusUpdating(true);
     try {
         await updateTicketStatus(id as string, newStatus);
-        setTicket(prev => ({ ...prev, status: newStatus }));
+        setTicket(prev => prev ? { ...prev, status: newStatus } : null);
     } catch (error) {
         console.error(error);
         alert("Failed to update status");
