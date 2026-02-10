@@ -10,6 +10,7 @@ export async function createOrder(
     billing_address: any;
     payment_id?: string;
     razorpay_order_id?: string;
+    items: any[]; // Accept items from client
   }
 ) {
   const supabase = await createClient();
@@ -19,16 +20,6 @@ export async function createOrder(
 
   if (!user) {
     throw new Error("User must be logged in to create an order");
-  }
-
-  // 1. Get Cart Items
-  const { data: cartItems, error: cartError } = await supabase
-    .from("cart_items")
-    .select("*, products(*)")
-    .eq("user_id", user.id);
-
-  if (cartError || !cartItems || cartItems.length === 0) {
-    throw new Error("Cart is empty or could not be retrieved");
   }
 
   // 2. Create Order
@@ -43,42 +34,32 @@ export async function createOrder(
       razorpay_order_id: orderDetails.razorpay_order_id,
       status: "pending" // Initial status
     })
-
     .select()
     .single();
 
   if (orderError) {
-    console.error("Error creating order:", orderError);
-    throw new Error("Failed to create order");
+    console.error("Error creating order:", orderError, orderDetails);
+    throw new Error("Failed to create order record");
   }
 
   // 3. Create Order Items
-  const orderItems = cartItems.map((item: any) => ({
+  const orderItemsInput = orderDetails.items.map((item: any) => ({
     order_id: order.id,
-    product_id: item.product_id,
+    product_id: item.id, // Using item.id which is the product id in client cart
     quantity: item.quantity,
-    price_at_purchase: item.products.price, // Snapshot price
-    // Add customization details if present in cart items (phase 4 requirement mentions customization)
+    price_at_purchase: item.price, // Snapshot price from client
   }));
 
   const { error: itemsError } = await supabase
     .from("order_items")
-    .insert(orderItems);
+    .insert(orderItemsInput);
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    // Potential rollback needed here in real world, but not strictly required for this demo
     throw new Error("Failed to create order items");
   }
 
-  // 4. Clear Cart
-  const { error: clearError } = await supabase
-    .from("cart_items")
-    .delete()
-    .eq("user_id", user.id);
-
-  if (clearError) console.error("Error clearing cart:", clearError);
-
+  // 4. Cleanup (Optional: client clears localStorage)
   revalidatePath("/dashboard/orders");
   return order;
 }

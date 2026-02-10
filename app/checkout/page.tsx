@@ -85,6 +85,7 @@ export default function CheckoutPage() {
         shipping_address: shippingAddress,
         billing_address: shippingAddress,
         razorpay_order_id: rzpOrder.id,
+        items: items, // Pass the cart items from localStorage
       });
 
       if (!order) throw new Error("Failed to create order");
@@ -98,9 +99,9 @@ export default function CheckoutPage() {
       }
 
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      alert("Something went wrong during checkout.");
+      alert(error.message || "Something went wrong during checkout.");
       setLoading(false);
     }
   };
