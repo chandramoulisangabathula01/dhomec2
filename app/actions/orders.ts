@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import Razorpay from "razorpay";
 
 export async function createOrder(
   orderDetails: {
@@ -10,17 +11,23 @@ export async function createOrder(
     billing_address: any;
     payment_id?: string;
     razorpay_order_id?: string;
-    items: any[]; // Accept items from client
+    items: any[];
   }
 ) {
+  console.log("createOrder called with details:", JSON.stringify(orderDetails, null, 2));
+  
   const supabase = await createClient();
   const {
     data: { user },
+    error: userError
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
+    console.error("Auth error in createOrder:", userError);
     throw new Error("User must be logged in to create an order");
   }
+
+  console.log("User authenticated:", user.id);
 
   // 2. Create Order
   const { data: order, error: orderError } = await supabase
@@ -32,15 +39,17 @@ export async function createOrder(
       billing_address: orderDetails.billing_address,
       payment_id: orderDetails.payment_id,
       razorpay_order_id: orderDetails.razorpay_order_id,
-      status: "pending" // Initial status
+      status: "pending"
     })
     .select()
     .single();
 
   if (orderError) {
-    console.error("Error creating order:", orderError, orderDetails);
+    console.error("Supabase Error creating order:", orderError);
     throw new Error("Failed to create order record: " + orderError.message);
   }
+
+  console.log("Order record created:", order.id);
 
   // 3. Create Order Items
   if (!orderDetails.items || !Array.isArray(orderDetails.items) || orderDetails.items.length === 0) {
@@ -50,10 +59,12 @@ export async function createOrder(
 
   const orderItemsInput = orderDetails.items.map((item: any) => ({
     order_id: order.id,
-    product_id: item.id || item.product_id, // Handle potential key differences
+    product_id: item.id || item.product_id,
     quantity: item.quantity || 1,
-    price_at_purchase: item.price || 0, // Snapshot price from client
+    price_at_purchase: item.price || 0,
   }));
+
+  console.log("Inserting order items:", orderItemsInput.length);
 
   const { error: itemsError } = await supabase
     .from("order_items")
@@ -61,13 +72,11 @@ export async function createOrder(
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    // Don't fail the order creation entirely if items fail, but log it. 
-    // Ideally we should rollback, but Supabase HTTP client doesn't support transactions easily without RPC.
-    // We throw so client knows something is wrong.
+    // Even if items fail, we return the order so the client can potentially recover or we can debug
     throw new Error("Failed to create order items: " + itemsError.message);
   }
 
-  // 4. Cleanup (Optional: client clears localStorage)
+  console.log("Order items created successfully");
   revalidatePath("/dashboard/orders");
   return order;
 }
@@ -120,31 +129,16 @@ export async function getOrderById(orderId: string) {
     
     if (error) return null;
     
-    // Security check: only allow if user owns order or is admin
-    // (Admin check omitted for brevity, assuming RLS handles it or separate admin action)
-    if (order.user_id !== user.id) {
-        // Check if admin
-        // const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-        // if (profile?.role !== 'admin') return null;
-        // RELYING ON RLS POLICIES DEFINED IN SCHEMA
-    }
-
     return order;
 }
 
 export async function createRazorpayOrder(amount: number) {
-    console.log("Starting createRazorpayOrder with amount:", amount);
+    console.log("createRazorpayOrder called with amount:", amount);
     
-    // Debug logging for env vars (masking secrets)
-    console.log("Checking Razorpay Keys...");
-    console.log("NEXT_PUBLIC_RAZORPAY_KEY_ID present:", !!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
-    console.log("RAZORPAY_KEY_SECRET present:", !!process.env.RAZORPAY_KEY_SECRET);
-
-    const Razorpay = require("razorpay");
-    
+    // Check for keys
     if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-        console.error("Razorpay keys are missing!");
-        throw new Error("Razorpay keys are not configured");
+        console.error("Razorpay keys missing in environment variables");
+        throw new Error("Razorpay configuration is incomplete. Please check environment variables.");
     }
 
     try {
@@ -153,21 +147,19 @@ export async function createRazorpayOrder(amount: number) {
             key_secret: process.env.RAZORPAY_KEY_SECRET,
         });
 
-        console.log("Razorpay instance created. Creating order...");
+        console.log("Generating Razorpay order...");
         const order = await instance.orders.create({
-            amount: Math.round(amount * 100), // amount in the smallest currency unit
+            amount: Math.round(amount * 100),
             currency: "INR",
-            receipt: `receipt_order_${Date.now()}`,
+            receipt: `receipt_${Date.now()}`,
         });
         
-        console.log("Razorpay order created successfully:", order.id);
+        console.log("Razorpay order created:", order.id);
         return { id: order.id, amount: order.amount };
     } catch (error: any) {
-        console.error("Razorpay order creation failed:", error);
-        // Log the full error object structure if possible
-        if (error.statusCode) console.error("Status Code:", error.statusCode);
-        if (error.error) console.error("Error Details:", error.error);
-        throw new Error(`Failed to create Razorpay order: ${error.message}`);
+        console.error("Razorpay Order Error:", error);
+        throw new Error(error.message || "Failed to initiate Razorpay order");
     }
 }
+
 

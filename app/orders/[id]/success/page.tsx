@@ -1,6 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import { CheckCircle2, Package, Home, AlertCircle } from "lucide-react";
+import { CheckCircle2, Package, Home, AlertCircle, Loader2 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function OrderSuccessPage({
   params,
@@ -14,7 +16,8 @@ export default async function OrderSuccessPage({
   let errorMsg: string | null = null;
 
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
+    const id = resolvedParams?.id;
     
     if (!id || id === 'undefined') {
         throw new Error("Invalid Order ID");
@@ -22,16 +25,22 @@ export default async function OrderSuccessPage({
 
     const resolvedSearchParams = await searchParams;
     paymentId = resolvedSearchParams?.payment_id;
+    
+    console.log(`Success page loaded for order: ${id}, payment: ${paymentId}`);
+    
     const supabase = await createClient();
 
     // Update order with payment ID if provided
     if (paymentId) {
-       // We ignore the result of the update to not block page load, but we await it to ensure consistency if possible
-      await supabase
+      const { error: updateError } = await supabase
         .from("orders")
         .update({ payment_id: paymentId, status: "paid" })
-        .eq("id", id)
-        .select(); // safe execution
+        .eq("id", id);
+        
+      if (updateError) {
+          console.error("Failed to update payment info:", updateError);
+          // We don't throw here to still show order details if possible
+      }
     }
 
     const { data, error } = await supabase
@@ -39,37 +48,36 @@ export default async function OrderSuccessPage({
       .select(`
         *,
         order_items (
-          *, products (name, image_url, slug)
+          *, 
+          products (name, image_url, slug)
         )
       `)
       .eq("id", id)
-      .single();
+      .maybeSingle(); // Use maybeSingle to avoid 406/JSON errors if not found
 
     if (error) {
       console.error("Order fetch error:", error);
       errorMsg = "Order not found or access denied.";
+    } else if (!data) {
+      errorMsg = "Could not find order details.";
     } else {
         order = data;
     }
   } catch (err: any) {
-    console.error("Order success page error:", err);
-    errorMsg = "Something went wrong while loading your order.";
+    console.error("Order success page crash:", err);
+    errorMsg = "An unexpected error occurred while loading your order.";
   }
 
   if (!order) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
         <div className="text-center max-w-md mx-auto">
-          {errorMsg ? (
-              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          ) : (
-              <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-          )}
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-slate-900 mb-2">
-              {errorMsg ? "Unable to Load Order" : "Payment Received!"}
+              Unable to Load Order
           </h1>
           <p className="text-slate-500 mb-6">
-              {errorMsg || "Your order is being processed. You can track it from your dashboard."}
+              {errorMsg || "We couldn't retrieve your order details. Please check your dashboard."}
           </p>
           <div className="flex flex-col gap-3 justify-center sm:flex-row">
             <Link
@@ -98,13 +106,12 @@ export default async function OrderSuccessPage({
     if (order.shipping_address) {
         if (typeof order.shipping_address === "string") {
             shippingAddress = JSON.parse(order.shipping_address);
-        } else if (typeof order.shipping_address === "object") {
+        } else {
             shippingAddress = order.shipping_address;
         }
     }
   } catch (e) {
     console.warn("Failed to parse shipping address", e);
-    shippingAddress = null;
   }
 
   // Robust checks for formatting
@@ -119,16 +126,16 @@ export default async function OrderSuccessPage({
         <div className="mx-auto w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6 animate-in zoom-in-50 duration-500">
           <CheckCircle2 className="w-10 h-10 text-emerald-600" />
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3 animate-in fade-in slide-in-from-bottom-3 duration-500">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">
           Order Placed Successfully!
         </h1>
-        <p className="text-slate-500 text-lg max-w-md mx-auto animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+        <p className="text-slate-500 text-lg max-w-md mx-auto">
           Thank you for your purchase. We&apos;ll process your order shortly.
         </p>
       </div>
 
       {/* Order Details Card */}
-      <div className="max-w-2xl mx-auto px-4 pb-16 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-200">
+      <div className="max-w-2xl mx-auto px-4 pb-16">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
           {/* Order Info Header */}
           <div className="bg-slate-50 px-8 py-6 border-b border-slate-100">
@@ -136,7 +143,7 @@ export default async function OrderSuccessPage({
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Order ID</p>
                 <p className="text-sm font-mono font-bold text-slate-800">
-                    {order.id ? order.id.slice(0, 8).toUpperCase() : "N/A"}
+                    {order.id ? String(order.id).slice(0, 8).toUpperCase() : "N/A"}
                 </p>
               </div>
               <div className="text-right">
@@ -158,9 +165,9 @@ export default async function OrderSuccessPage({
           <div className="px-8 py-6 space-y-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Items Ordered</h3>
             {Array.isArray(order.order_items) && order.order_items.map((item: any) => {
-               // Safe defaults
-               const productName = item.products?.name || "Product";
-               const productImg = item.products?.image_url;
+               const products = Array.isArray(item.products) ? item.products[0] : item.products;
+               const productName = products?.name || "Product";
+               const productImg = products?.image_url;
                const itemTotal = (item.price_at_purchase || 0) * (item.quantity || 1);
                
                return (
@@ -256,3 +263,4 @@ export default async function OrderSuccessPage({
     </div>
   );
 }
+

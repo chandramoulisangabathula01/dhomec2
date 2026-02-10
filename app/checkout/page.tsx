@@ -90,7 +90,10 @@ export default function CheckoutPage() {
 
       // 3. Initiate Payment
       if (window.Razorpay) {
-        handlePayment(order.id, rzpOrder.id, rzpOrder.amount);
+        if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+            throw new Error("Razorpay Key ID is missing. Please contact support.");
+        }
+        handlePayment(order.id, rzpOrder.id, Number(rzpOrder.amount));
       } else {
         alert("Razorpay SDK failed to load. Please refresh.");
         setLoading(false);
