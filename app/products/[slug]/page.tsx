@@ -8,6 +8,7 @@ import { ProductInfo } from "@/components/products/ProductInfo";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { getProductReviews } from "@/app/actions/reviews";
 import { isInWishlist } from "@/app/actions/wishlist";
+import { ProductDetailClient } from "@/components/products/ProductDetailClient";
 
 export const revalidate = 3600;
 
@@ -125,6 +126,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               isLoggedIn={isLoggedIn}
             />
         </div>
+
+        {/* Sticky Mobile Bottom Bar */}
+        <ProductDetailClient product={product} />
     </div>
   )
 }
+

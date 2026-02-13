@@ -1,0 +1,92 @@
+
+> dhomec@0.1.0 build
+> next build
+
+▲ Next.js 16.1.4 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.7s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/105) ...
+  Generating static pages using 11 workers (26/105) 
+  Generating static pages using 11 workers (52/105) 
+  Generating static pages using 11 workers (78/105) 
+✓ Generating static pages using 11 workers (105/105) in 1504.1ms
+  Finalizing page optimization ...
+
+Route (app)                                  Revalidate  Expire
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ƒ /admin
+├ ƒ /admin/analytics
+├ ƒ /admin/categories
+├ ƒ /admin/categories/[id]
+├ ƒ /admin/categories/new
+├ ƒ /admin/dashboard
+├ ƒ /admin/enquiries
+├ ƒ /admin/orders
+├ ƒ /admin/orders/[id]
+├ ƒ /admin/products
+├ ƒ /admin/products/edit/[id]
+├ ƒ /admin/products/new
+├ ƒ /admin/returns
+├ ƒ /admin/reviews
+├ ƒ /admin/seller
+├ ƒ /admin/seller/bulk
+├ ƒ /admin/seller/financials
+├ ƒ /admin/seller/insights
+├ ƒ /admin/seller/inventory
+├ ƒ /admin/seller/pipeline
+├ ƒ /admin/seller/workshop
+├ ƒ /admin/settings
+├ ƒ /admin/tickets
+├ ƒ /admin/tickets/[id]
+├ ƒ /admin/users
+├ ƒ /admin/users/[id]
+├ ƒ /api/webhooks/razorpay
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+├ ○ /checkout
+├ ○ /contact
+├ ○ /contact/support
+├ ƒ /dashboard
+├ ƒ /dashboard/orders
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/tickets
+├ ƒ /dashboard/tickets/[id]
+├ ƒ /dashboard/tickets/new
+├ ƒ /dashboard/wishlist
+├ ○ /enquiry
+├ ○ /hero-options
+├ ƒ /login
+├ ƒ /login/forgot-password
+├ ƒ /orders
+├ ƒ /orders/[id]
+├ ƒ /orders/[id]/invoice
+├ ƒ /orders/[id]/success
+├ ○ /partners
+├ ○ /portfolio
+├ ƒ /portfolio/[id]
+├ ○ /privacy-policy
+├ ○ /products                                        1h      1y
+├ ƒ /products/[slug]
+├ ● /products/category/[slug]                        1h      1y
+│ ├ /products/category/road-traffic-control          1h      1y
+│ ├ /products/category/swing-gates-opener            1h      1y
+│ ├ /products/category/rapid-door                    1h      1y
+│ └ [+11 more paths]
+├ ○ /return-policy
+├ ○ /services
+├ ƒ /signup
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ƒ  (Dynamic)  server-rendered on demand
+

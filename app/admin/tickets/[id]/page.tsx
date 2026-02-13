@@ -244,6 +244,42 @@ export default function AdminTicketDetailsPage() {
                 </div>
 
             </div>
+            
+            {/* Consultation Data (Metadata) */}
+            {(ticket.metadata?.preferred_date || ticket.metadata?.site_photos?.length > 0) && (
+                <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-200">
+                    <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        Consultation Data
+                    </h3>
+                    <div className="space-y-4">
+                        {ticket.metadata?.preferred_date && (
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Preferred Date</p>
+                                <p className="text-sm font-bold text-slate-900 bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                                    {new Date(ticket.metadata.preferred_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </p>
+                            </div>
+                        )}
+                        
+                        {ticket.metadata?.site_photos && ticket.metadata.site_photos.length > 0 && (
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-2">Site Photos ({ticket.metadata.site_photos.length})</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {ticket.metadata.site_photos.map((url: string, idx: number) => (
+                                        <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-lg overflow-hidden border border-slate-200 relative group">
+                                            <img src={url} alt={`Site ${idx}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-[10px] text-white font-bold uppercase tracking-wider">View</span>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="bg-blue-600 rounded-[24px] p-6 text-white shadow-lg shadow-blue-200">
                 <h3 className="font-bold mb-2 flex items-center gap-2">

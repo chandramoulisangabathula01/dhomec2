@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { createOrder, createRazorpayOrder } from "@/app/actions/orders";
 import Script from "next/script";
+import { SavedAddresses } from "@/components/checkout/SavedAddresses";
+import type { Address } from "@/types";
 
 declare global {
   interface Window {
@@ -18,17 +20,37 @@ declare global {
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const router = useRouter();
 
+  const handleAddressSelect = (address: Address) => {
+    setSelectedAddress(address);
+  };
+
+  /* 
+     Handle Payment Flow
+     - If Mock: Directly redirect to success.
+     - If Real: Open Razorpay modal.
+  */
   const handlePayment = async (orderId: string, razorpayOrderId: string, amount: number) => {
+    // Check if Mock Order ID
+    if (razorpayOrderId.startsWith("mock_")) {
+        console.log("Processing Mock Payment for Order:", orderId);
+        // Simulate API delay
+        setTimeout(() => {
+            router.push(`/orders/${orderId}/success?payment_id=mock_pay_${Date.now()}`);
+            clearCart();
+        }, 1000);
+        return;
+    }
+
     const supabase = createClient();
     const res = await supabase.auth.getUser();
-
     const user = res.data.user;
 
     const options = {
       key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: amount, // amount is already in paise from Razorpay API
+      amount: amount, 
       currency: "INR",
       name: "Dhomec",
       description: "Order #" + orderId,
@@ -48,6 +70,11 @@ export default function CheckoutPage() {
       theme: {
         color: "#2563eb",
       },
+      modal: {
+          ondismiss: function() {
+              setLoading(false);
+          }
+      }
     };
 
     const rzp1 = new window.Razorpay(options);
@@ -71,6 +98,8 @@ export default function CheckoutPage() {
       state: formData.get("state"),
       pincode: formData.get("pincode"),
       phone: formData.get("phone"),
+      company: formData.get("company"),
+      gstin: formData.get("gstin"),
     };
 
     try {
@@ -89,7 +118,10 @@ export default function CheckoutPage() {
       if (!order) throw new Error("Failed to create order");
 
       // 3. Initiate Payment
-      if (window.Razorpay) {
+      if (rzpOrder.isMock) {
+          alert("Using MOCK Payment Gateway (No keys configured). Simulating success...");
+          handlePayment(order.id, rzpOrder.id, Number(rzpOrder.amount));
+      } else if (window.Razorpay) {
         if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
             throw new Error("Razorpay Key ID is missing. Please contact support.");
         }
@@ -141,44 +173,61 @@ export default function CheckoutPage() {
           {/* Shipping Form */}
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-xl font-semibold mb-6">Shipping Details</h2>
+
+            {/* Saved Addresses */}
+            <div className="mb-6">
+              <SavedAddresses onSelect={handleAddressSelect} selectedAddress={selectedAddress} />
+            </div>
+
             <form id="checkout-form" onSubmit={handleCheckout} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-                    <input name="fullName" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                     <input name="fullName" required defaultValue={selectedAddress?.fullName || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
                  </div>
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input name="email" type="email" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                     <input name="email" type="email" required defaultValue={selectedAddress?.email || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
                  </div>
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                    <input name="phone" type="tel" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                     <input name="phone" type="tel" required defaultValue={selectedAddress?.phone || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
                  </div>
+                 
+                 {/* B2B Fields */}
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Company (Optional)</label>
+                    <input name="company" className="w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="For GST Invoice" />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">GSTIN (Optional)</label>
+                    <input name="gstin" className="w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="GST Number" />
+                 </div>
+
                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
-                    <textarea name="address" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" rows={3}/>
+                     <textarea name="address" required defaultValue={selectedAddress?.address || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" rows={3}/>
                  </div>
                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
-                    <input name="city" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
-                    <input name="state" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Pincode</label>
-                    <input name="pincode" required className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                     <input name="city" required defaultValue={selectedAddress?.city || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                  </div>
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">State</label>
+                     <input name="state" required defaultValue={selectedAddress?.state || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
+                  </div>
+                  <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Pincode</label>
+                     <input name="pincode" required defaultValue={selectedAddress?.pincode || ""} className="w-full rounded-md border-gray-300 shadow-sm p-2 border" />
                  </div>
               </div>
             </form>
           </div>
 
           {/* Order Summary */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border h-fit">
+          <div className="bg-white p-6 rounded-lg shadow-sm border h-fit sticky top-24">
             <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
-            <div className="divide-y space-y-4">
+            <div className="space-y-3">
                 {items.map(item => (
                     <div key={item.id} className="flex justify-between py-2">
                         <span className="text-sm">
@@ -188,10 +237,42 @@ export default function CheckoutPage() {
                     </div>
                 ))}
                 
+                <div className="border-t pt-3 space-y-2">
+                    <div className="flex justify-between text-sm text-slate-600">
+                        <span>Subtotal</span>
+                        <span>₹ {totalPrice.toLocaleString('en-IN')}</span>
+                    </div>
+                    
+                    {/* GST Breakdown (18% inclusive) */}
+                    {(() => {
+                      const gstAmount = totalPrice - (totalPrice / 1.18);
+                      const cgst = gstAmount / 2;
+                      const sgst = gstAmount / 2;
+                      return (
+                        <>
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>CGST (9%)</span>
+                            <span>₹ {cgst.toFixed(0)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-slate-500">
+                            <span>SGST (9%)</span>
+                            <span>₹ {sgst.toFixed(0)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                    <div className="flex justify-between text-sm text-slate-500">
+                        <span>Shipping</span>
+                        <span className="text-emerald-600 font-medium">Calculated at dispatch</span>
+                    </div>
+                </div>
+                
                 <div className="pt-4 border-t flex justify-between font-bold text-lg">
-                    <span>Total</span>
+                    <span>Grand Total</span>
                     <span>₹ {totalPrice.toLocaleString('en-IN')}</span>
                 </div>
+                <p className="text-[10px] text-slate-400">* Price inclusive of GST</p>
             </div>
 
             <Button 
@@ -204,7 +285,7 @@ export default function CheckoutPage() {
                 Pay & Place Order
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-4">
-                Secured by Razorpay
+                Secured by Razorpay • 256-bit SSL Encryption
             </p>
           </div>
         </div>

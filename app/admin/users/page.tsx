@@ -31,13 +31,18 @@ export default async function AdminUsersPage() {
           </div>
           <div className="bg-blue-600 p-8 rounded-[32px] text-white flex items-center gap-8 shadow-xl shadow-blue-500/20 relative overflow-hidden shrink-0">
              <div className="relative z-10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Active Accounts</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Total</p>
                 <h2 className="text-3xl font-black">{profiles?.length || 0}</h2>
              </div>
              <div className="h-10 w-px bg-white/20 relative z-10" />
              <div className="relative z-10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Admins</p>
-                <h2 className="text-3xl font-black">{profiles?.filter(p => p.role === 'admin').length || 0}</h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Super Admins</p>
+                <h2 className="text-3xl font-black">{profiles?.filter(p => p.role === 'SUPER_ADMIN').length || 0}</h2>
+             </div>
+             <div className="h-10 w-px bg-white/20 relative z-10" />
+             <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-1">Staff</p>
+                <h2 className="text-3xl font-black">{profiles?.filter(p => ['SUPPORT_STAFF', 'LOGISTICS_STAFF'].includes((p as any).role)).length || 0}</h2>
              </div>
              <ShieldCheck className="absolute -right-4 -bottom-4 w-32 h-32 opacity-10" />
           </div>
@@ -59,8 +64,8 @@ export default async function AdminUsersPage() {
       </div>
 
       {/* Users Table-List */}
-      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm border-collapse">
+      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-visible">
+          <table className="w-full text-left text-sm border-collapse overflow-visible">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
               <th className="p-6 font-black text-slate-500 uppercase tracking-widest text-[10px]">Identity & Account</th>
@@ -76,7 +81,10 @@ export default async function AdminUsersPage() {
                 <td className="p-6">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0
-                        ${profile.role === 'admin' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                        ${profile.role === 'SUPER_ADMIN' ? 'bg-indigo-50 text-indigo-600' : 
+                          profile.role === 'SUPPORT_STAFF' ? 'bg-emerald-50 text-emerald-600' :
+                          profile.role === 'LOGISTICS_STAFF' ? 'bg-orange-50 text-orange-600' :
+                          'bg-blue-50 text-blue-600'}`}>
                         {profile.full_name?.charAt(0) || 'U'}
                     </div>
                     <div className="min-w-0">
@@ -90,8 +98,11 @@ export default async function AdminUsersPage() {
                 </td>
                 <td className="p-6">
                     <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest
-                        ${profile.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-600'}`}>
-                        {profile.role}
+                        ${profile.role === 'SUPER_ADMIN' ? 'bg-indigo-100 text-indigo-700' : 
+                          profile.role === 'SUPPORT_STAFF' ? 'bg-emerald-100 text-emerald-700' :
+                          profile.role === 'LOGISTICS_STAFF' ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-600'}`}>
+                        {profile.role?.replace('_', ' ')}
                     </span>
                 </td>
                 <td className="p-6">
@@ -120,4 +131,3 @@ export default async function AdminUsersPage() {
     </div>
   );
 }
-

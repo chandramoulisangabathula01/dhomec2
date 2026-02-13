@@ -43,6 +43,13 @@ export async function createOrder(
 
   console.log("User authenticated:", user.id);
 
+  // Default 18% GST Logic (Inclusive)
+  const gstAmount = orderDetails.total_amount - (orderDetails.total_amount / 1.18);
+  const taxBreakdown = {
+      cgst: Number((gstAmount / 2).toFixed(2)),
+      sgst: Number((gstAmount / 2).toFixed(2))
+  };
+
   // 2. Create Order
   // Note: payment_id renamed to razorpay_payment_id in recent migration
   const { data: order, error: orderError } = await supabase
@@ -54,7 +61,8 @@ export async function createOrder(
       billing_address: orderDetails.billing_address,
       razorpay_payment_id: orderDetails.payment_id,
       razorpay_order_id: orderDetails.razorpay_order_id,
-      status: "PENDING_PAYMENT"
+      status: "PENDING_PAYMENT",
+      tax_breakdown: taxBreakdown
     })
     .select()
     .single();
@@ -100,6 +108,36 @@ export async function createOrder(
   if (auditError) console.error("Error creating initial audit log:", auditError);
 
   console.log("Order items created successfully");
+
+  // Send Confirmation Email
+  try {
+    const { OrderConfirmationEmail } = await import("@/lib/email-templates");
+    const { sendEmail } = await import("@/lib/notifications");
+    
+    // Attempt to get user email
+    let userEmail = user.email;
+    let userName = user.user_metadata?.full_name || userEmail?.split('@')[0] || 'Customer';
+
+    // If guest checkout details are available in shipping address, prioritize or fallback?
+    // Usually auth user email is primary.
+    if (!userEmail && orderDetails.shipping_address?.email) {
+        userEmail = orderDetails.shipping_address.email;
+        userName = orderDetails.shipping_address.fullName;
+    }
+
+    if (userEmail) {
+        const confirmationHtml = OrderConfirmationEmail(
+            order.id, 
+            userName,
+            orderDetails.items, // Assuming these have product details
+            orderDetails.total_amount
+        );
+        await sendEmail(userEmail, `Order Confirmation #${order.id.slice(0, 8)}`, confirmationHtml);
+    }
+  } catch (emailErr) {
+      console.warn("Failed to send confirmation email", emailErr);
+  }
+
   revalidatePath("/dashboard/orders");
   return order;
 }
@@ -160,8 +198,12 @@ export async function createRazorpayOrder(amount: number) {
     
     // Check for keys
     if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-        console.error("Razorpay keys missing in environment variables");
-        throw new Error("Razorpay configuration is incomplete. Please check environment variables.");
+        console.warn("Razorpay keys missing. Using MOCK mode.");
+        return { 
+            id: `mock_order_${Date.now()}`, 
+            amount: Math.round(amount * 100),
+            isMock: true 
+        };
     }
 
     try {
@@ -178,7 +220,7 @@ export async function createRazorpayOrder(amount: number) {
         });
         
         console.log("Razorpay order created:", order.id);
-        return { id: order.id, amount: order.amount };
+        return { id: order.id, amount: order.amount, isMock: false };
     } catch (error: any) {
         console.error("Razorpay Order Error:", error);
         throw new Error(error.message || "Failed to initiate Razorpay order");
@@ -198,7 +240,10 @@ export async function getAllOrders() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Unauthorized: Admin only");
+  const allowedRoles = ['SUPER_ADMIN', 'SUPPORT_STAFF', 'LOGISTICS_STAFF'];
+  if (!profile || !allowedRoles.includes(profile.role)) {
+      throw new Error("Unauthorized: Staff access only");
+  }
 
   const { data: orders, error } = await supabase
     .from("orders")
@@ -220,7 +265,9 @@ export async function getAllOrders() {
   return orders;
 }
 
-export async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
+import { ShippingInfo } from "@/types";
+
+export async function updateOrderStatus(orderId: string, newStatus: OrderStatus, shippingInfo?: ShippingInfo) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -233,7 +280,10 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Unauthorized: Admin only");
+  const allowedRoles = ['SUPER_ADMIN', 'SUPPORT_STAFF', 'LOGISTICS_STAFF'];
+  if (!profile || !allowedRoles.includes(profile.role)) {
+      throw new Error("Unauthorized: Staff access only");
+  }
 
   // Validate State Transition
   const { data: order, error: fetchError } = await supabase
@@ -273,13 +323,20 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
       }
   }
 
+  // Prepare Update Data
+  const updateData: any = { 
+    status: newStatus,
+    updated_at: new Date().toISOString()
+  };
+
+  if (shippingInfo && newStatus === 'SHIPPED') {
+      updateData.shipping_info = shippingInfo;
+  }
+
   // Update Status
   const { error: updateError } = await supabase
     .from("orders")
-    .update({ 
-      status: newStatus,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq("id", orderId);
 
   if (updateError) throw updateError;
@@ -294,6 +351,33 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     });
 
   if (auditError) console.error("Error creating audit log:", auditError);
+
+  // Send Email Notification for SHIPPED status
+  if (newStatus === 'SHIPPED' && shippingInfo) {
+      try {
+          // Fetch user email details
+          const { data: orderWithUser } = await supabase
+              .from('orders')
+              .select('id, user_id, shipping_address, user:profiles(email, full_name)')
+              .eq('id', orderId)
+              .single();
+          
+          if (orderWithUser) {
+              const userObj: any = Array.isArray(orderWithUser.user) ? orderWithUser.user[0] : orderWithUser.user;
+              const recipientEmail = userObj?.email || (orderWithUser.shipping_address as any)?.email;
+              const recipientName = userObj?.full_name || (orderWithUser.shipping_address as any)?.fullName || 'Customer';
+              
+              if (recipientEmail) {
+                  const { OrderShippedEmail } = await import("@/lib/email-templates");
+                  const { sendEmail } = await import("@/lib/notifications");
+                  const emailHtml = OrderShippedEmail(orderId, recipientName, shippingInfo);
+                  await sendEmail(recipientEmail, `Order #${orderId.slice(0, 8)} Shipped!`, emailHtml);
+              }
+          }
+      } catch (emailErr) {
+          console.error("Failed to send shipment email:", emailErr);
+      }
+  }
 
   revalidatePath(`/admin/orders`);
   revalidatePath(`/admin/orders/${orderId}`);
@@ -315,7 +399,14 @@ export async function getOrderHistory(orderId: string) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Unauthorized: Admin only");
+  const allowedRoles = ['SUPER_ADMIN', 'SUPPORT_STAFF', 'LOGISTICS_STAFF'];
+  if (!profile || !allowedRoles.includes(profile.role)) {
+      // Check if user is the order owner
+      const { data: order } = await supabase.from('orders').select('user_id').eq('id', orderId).single();
+      if (!order || order.user_id !== user.id) {
+          throw new Error("Unauthorized: Access denied");
+      }
+  }
 
   const { data: history, error } = await supabase
     .from("order_status_history")

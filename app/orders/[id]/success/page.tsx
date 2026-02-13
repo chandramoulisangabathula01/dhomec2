@@ -29,6 +29,15 @@ export default async function OrderSuccessPage({
     console.log(`Success page loaded for order: ${id}, payment: ${paymentId}`);
     
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.log("No user found on success page, redirecting to login");
+      // Allow if it's a guest order? Usually orders are tied to users.
+      // If we want to be strict:
+      // return redirect("/login");
+      // For now let's just proceed but we will check ownership below.
+    }
 
     // Update order with payment ID and PLACED status if provided
     if (paymentId) {
@@ -48,7 +57,7 @@ export default async function OrderSuccessPage({
           await supabase.from("order_status_history").insert({
               order_id: id,
               status: "PLACED",
-              changed_by: (await supabase.auth.getUser()).data.user?.id
+              changed_by: user?.id
           });
       }
     }
@@ -71,7 +80,16 @@ export default async function OrderSuccessPage({
     } else if (!data) {
       errorMsg = "Could not find order details.";
     } else {
-        order = data;
+        // Security Check: Verify user ownership
+        if (user && data.user_id !== user.id) {
+            console.error(`Security Alert: User ${user.id} tried to view order ${id} owned by ${data.user_id}`);
+            errorMsg = "Access denied. You do not have permission to view this order.";
+        } else if (!user && !paymentId) {
+            // If no user and no paymentId in session (just a link), block it.
+            errorMsg = "Please log in to view your order details.";
+        } else {
+            order = data;
+        }
     }
   } catch (err: any) {
     console.error("Order success page crash:", err);

@@ -14,7 +14,7 @@ export async function getEnquiries() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Forbidden");
+  if (!['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any)) throw new Error("Forbidden");
 
   const { data, error } = await supabase
     .from("enquiries")
@@ -39,7 +39,7 @@ export async function updateEnquiryStatus(enquiryId: string, status: string) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Forbidden");
+  if (!['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any)) throw new Error("Forbidden");
 
   const { error } = await supabase
     .from("enquiries")
@@ -66,7 +66,7 @@ export async function deleteEnquiry(enquiryId: string) {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") throw new Error("Forbidden");
+  if (!['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any)) throw new Error("Forbidden");
 
   const { error } = await supabase
     .from("enquiries")

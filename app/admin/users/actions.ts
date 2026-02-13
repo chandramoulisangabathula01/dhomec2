@@ -3,10 +3,10 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function toggleAdminRole(userId: string, currentRole: string) {
+export async function changeUserRole(userId: string, newRole: string) {
     const supabase = await createClient();
     
-    // 1. Verify the requester is an admin
+    // 1. Verify requester is SUPER_ADMIN
     const { data: { user: adminUser } } = await supabase.auth.getUser();
     if (!adminUser) throw new Error("Unauthorized");
 
@@ -16,30 +16,28 @@ export async function toggleAdminRole(userId: string, currentRole: string) {
         .eq("id", adminUser.id)
         .single();
     
-    if (adminProfile?.role !== "admin") {
-        throw new Error("Only admins can change roles");
+    if (adminProfile?.role !== "SUPER_ADMIN") {
+        throw new Error("Only Super Admins can change roles");
     }
 
-    // 2. Prevent admin from removing their own admin role (safety)
-    if (adminUser.id === userId && currentRole === "admin") {
-        throw new Error("You cannot remove your own admin status");
+    // 2. Prevent self-demotion
+    if (adminUser.id === userId && newRole !== "SUPER_ADMIN") {
+        throw new Error("You cannot remove your own Super Admin status");
     }
 
-    // 3. Toggle Role
-    const newRole = currentRole === "admin" ? "user" : "admin";
-    
+    // 3. Update Role
     const { error } = await supabase
         .from("profiles")
         .update({ role: newRole })
         .eq("id", userId);
 
     if (error) {
-        console.error(error);
-        throw new Error("Failed to update user role");
+        console.error("Error updating role:", error);
+        throw new Error(`Failed to update role: ${error.message}`);
     }
 
     revalidatePath("/admin/users");
-    return { success: true, newRole };
+    return { success: true };
 }
 
 export async function deleteUserProfile(userId: string) {
@@ -50,27 +48,29 @@ export async function deleteUserProfile(userId: string) {
     if (!adminUser) throw new Error("Unauthorized");
     
     const { data: adminProfile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", adminUser.id)
-        .single();
+      .from("profiles")
+      .select("role")
+      .eq("id", adminUser.id)
+      .single();
     
-    if (adminProfile?.role !== "admin") {
-        throw new Error("Unauthorized");
+    // Roles are SUPER_ADMIN, SUPPORT_STAFF, etc.
+    if (adminProfile?.role !== "SUPER_ADMIN") {
+        throw new Error("Only Super Admins can delete users");
     }
 
-    // Note: We can only delete the profile here. 
-    // Deleting the actual Auth user requires the Service Role Key.
-    // For now, we just mark them as banned or delete the profile.
-    // Since we don't have a 'banned' column yet, let's just delete the profile.
+    // Deleting the profile. 
+    // Since we fixed DB constraints to CASCADE from auth.users, 
+    // deleting the profile alone might still leave the auth user.
+    // However, the database error they were getting was due to FK constraints 
+    // when trying to delete the profile. This should be fixed now.
     const { error } = await supabase
         .from("profiles")
         .delete()
         .eq("id", userId);
 
     if (error) {
-        console.error(error);
-        throw new Error("Failed to delete user profile");
+        console.error("Database error deleting profile:", error);
+        throw new Error(`Database error deleting user: ${error.message}`);
     }
 
     revalidatePath("/admin/users");

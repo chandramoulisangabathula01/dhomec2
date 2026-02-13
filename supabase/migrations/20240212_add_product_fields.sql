@@ -1,0 +1,13 @@
+-- Migration to add extended product fields
+ALTER TABLE public.products 
+ADD COLUMN IF NOT EXISTS sub_category TEXT,
+ADD COLUMN IF NOT EXISTS brand TEXT,
+ADD COLUMN IF NOT EXISTS units TEXT,
+ADD COLUMN IF NOT EXISTS sku TEXT,
+ADD COLUMN IF NOT EXISTS tax NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS discount NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'closed',
+ADD COLUMN IF NOT EXISTS min_quantity INTEGER DEFAULT 0;
+
+-- Refresh the schema cache
+NOTIFY pgrst, 'reload schema';

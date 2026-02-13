@@ -24,6 +24,7 @@ export async function createTicket(formData: FormData) {
       subject,
       priority,
       status: "open",
+      type: "GENERAL_QUERY"
     })
     .select()
     .single();
@@ -43,6 +44,18 @@ export async function createTicket(formData: FormData) {
   if (messageError) {
     console.error("Error creating message:", messageError);
     // Should probably delete the ticket if message fails, or just ignore for now
+  } else {
+    // 3. Send Email Notification
+    if (user.email) {
+        try {
+            const { TicketCreatedEmail } = await import("@/lib/email-templates");
+            const { sendEmail } = await import("@/lib/notifications");
+            const emailHtml = TicketCreatedEmail(ticket.id, user.user_metadata?.full_name || user.email.split('@')[0], subject);
+            await sendEmail(user.email, `Ticket Received: ${subject}`, emailHtml);
+        } catch (emailErr) {
+            console.error("Failed to send ticket confirmation email", emailErr);
+        }
+    }
   }
 
   revalidatePath("/dashboard/tickets");

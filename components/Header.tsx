@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { SearchModal } from "@/components/search/SearchModal";
 
 const menuItems = [
   { name: "Home", href: "/" },
@@ -47,6 +48,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -177,6 +179,15 @@ export function Header() {
             </nav>
 
             <div className="hidden lg:flex items-center gap-4">
+                {/* Search Button */}
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+                  title="Search products"
+                >
+                    <Search className="h-5 w-5" />
+                </button>
+
                 {/* Cart Button */}
                 <button 
                   onClick={() => setIsCartOpen(true)}
@@ -337,6 +348,9 @@ export function Header() {
             </div>
         </div>
       </header>
+
+      {/* Search Modal */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

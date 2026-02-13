@@ -20,7 +20,7 @@ export default async function TicketsPage() {
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">My Support Tickets</h1>
-            <Link href="/contact/support">
+            <Link href="/dashboard/tickets/new">
                 <Button className="gap-2">
                     <Plus className="w-4 h-4" /> New Ticket
                 </Button>
@@ -32,7 +32,7 @@ export default async function TicketsPage() {
                 <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-900">No tickets found</h3>
                 <p className="text-slate-500 mb-6">Need help? Create a new support ticket.</p>
-                <Link href="/contact/support">
+                <Link href="/dashboard/tickets/new">
                     <Button variant="outline">Create Ticket</Button>
                 </Link>
             </div>

@@ -1,14 +1,18 @@
 "use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FileText, CheckCircle2, ShoppingCart, Heart, Share2, MessageCircle } from "lucide-react";
+import { FileText, CheckCircle2, ShoppingCart, Heart, Share2, MessageCircle, Ruler, Phone, Package } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useState, useTransition } from "react";
 import { addToWishlist, removeFromWishlist } from "@/app/actions/wishlist";
 import { useToast } from "@/components/ui/toast";
+import { Product } from "@/types";
+import { ZakekeCustomizeButton } from "./ZakekeCustomizeButton";
+import { PincodeCheck } from "./PincodeCheck";
+import { BookMeasurementModal } from "./BookMeasurementModal";
 
 interface ProductInfoProps {
-  product: any;
+  product: Product;
   className?: string;
   isWishlisted?: boolean;
 }
@@ -18,7 +22,10 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
   const [isAdding, setIsAdding] = useState(false);
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [isPending, startTransition] = useTransition();
+  const [showMeasurementModal, setShowMeasurementModal] = useState(false);
   const { addToast } = useToast();
+
+  const isConsultation = product.type === 'CONSULTATION_ONLY';
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -27,7 +34,7 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
       name: product.name,
       price: product.price || 0,
       quantity: 1,
-      image_url: product.image_url,
+      image_url: product.image_url || "",
       slug: product.slug,
     });
     addToast(`Added ${product.name} to cart`, "success");
@@ -71,60 +78,169 @@ export function ProductInfo({ product, className, isWishlisted: initialWishliste
       <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2 break-words leading-tight">{product.name}</h1>
       <p className="text-lg text-primary font-medium mb-6">{product.model_name}</p>
       
-      {/* Price */}
-      {product.price && (
-          <div className="mb-6 flex flex-col gap-4">
-              <div className="bg-muted/30 p-4 rounded-lg border border-border inline-block min-w-[200px]">
-                  <span className="text-sm text-muted-foreground block mb-1">Approx. Price:</span>
-                  <span className="text-3xl font-bold text-foreground">₹ {product.price.toLocaleString('en-IN')}</span>
-                  <span className="text-muted-foreground text-sm ml-1">/ Piece</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handleAddToCart} disabled={isAdding} className="gap-2 flex-1 md:flex-none">
-                  <ShoppingCart className="h-4 w-4" />
-                  {isAdding ? "Added!" : "Add to Cart"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleWishlist} 
-                  disabled={isPending}
-                  className={`gap-2 ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50 hover:bg-rose-100" : ""}`}
-                >
-                  <Heart className={`h-4 w-4 ${wishlisted ? "fill-rose-600" : ""}`} />
-                  {wishlisted ? "Wishlisted" : "Wishlist"}
-                </Button>
-                <Button variant="outline" onClick={handleShare} className="gap-2">
-                  <Share2 className="h-4 w-4" />
-                </Button>
+      {/* Zakeke Customization Button */}
+      {product.zakeke_template_id && (
+          <div className="mb-6 p-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl">
+              <div className="bg-white rounded-[14px] p-6 text-center">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
+                       Personalization Available
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto">
+                      Design your own version of {product.name} with our 3D configurator.
+                  </p>
+                  <ZakekeCustomizeButton templateId={product.zakeke_template_id} productName={product.name} />
               </div>
           </div>
       )}
 
-      {/* Enquiry CTA for products without price */}
-      {!product.price && (
-        <div className="mb-6">
-          <Link href={`/enquiry?product=${encodeURIComponent(product.name)}`}>
-            <Button className="gap-2 w-full md:w-auto">
-              <MessageCircle className="h-4 w-4" />
-              Request Quotation
-            </Button>
-          </Link>
-          <div className="flex gap-3 mt-3">
-            <Button 
-              variant="outline" 
-              onClick={handleWishlist} 
-              disabled={isPending}
-              className={`gap-2 ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50 hover:bg-rose-100" : ""}`}
-            >
-              <Heart className={`h-4 w-4 ${wishlisted ? "fill-rose-600" : ""}`} />
-              {wishlisted ? "Wishlisted" : "Wishlist"}
-            </Button>
-            <Button variant="outline" onClick={handleShare} className="gap-2">
-              <Share2 className="h-4 w-4" />
-            </Button>
+      {/* Pricing & CTA Section */}
+      <div className="mb-8">
+        {isConsultation ? (
+          <div className="space-y-6">
+            <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex items-start gap-4">
+               <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                  <Ruler className="w-6 h-6" />
+               </div>
+               <div>
+                  <h3 className="text-sm font-black text-amber-900 uppercase tracking-tight">Price Calculated After Site Visit</h3>
+                  <p className="text-xs font-medium text-amber-700/80 mt-1 leading-relaxed">
+                    This product is custom-fitted. Our experts will visit your site for precise dimensions before providing a final quote.
+                  </p>
+               </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+               <Button 
+                  size="lg" 
+                  onClick={() => setShowMeasurementModal(true)}
+                  className="flex-1 min-w-[200px] gap-2 h-14 bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-500/20 text-base font-black"
+               >
+                  <Ruler className="w-5 h-5" />
+                  Book Measurement Visit
+               </Button>
+               
+               <Link 
+                  href={`/enquiry?product=${encodeURIComponent(product.name)}&type=callback`} 
+                  className="flex-1 min-w-[160px]"
+               >
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className="w-full h-14 gap-2 font-bold rounded-xl border-slate-200 text-slate-600"
+                  >
+                    <Phone className="w-5 h-5" />
+                    Request Callback
+                  </Button>
+               </Link>
+            </div>
+
+            <div className="flex gap-2">
+               <Button 
+                 variant="outline" 
+                 size="lg"
+                 onClick={handleWishlist} 
+                 disabled={isPending}
+                 className={`h-14 px-6 border-slate-200 rounded-xl ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50" : ""}`}
+               >
+                 <Heart className={`h-5 w-5 ${wishlisted ? "fill-rose-600" : ""}`} />
+               </Button>
+               <Button variant="outline" size="lg" onClick={handleShare} className="h-14 px-6 border-slate-200 rounded-xl">
+                 <Share2 className="h-5 w-5" />
+               </Button>
+            </div>
+
+            {/* Book Measurement Modal */}
+            <BookMeasurementModal
+              isOpen={showMeasurementModal}
+              onClose={() => setShowMeasurementModal(false)}
+              productName={product.name}
+              productId={product.id}
+            />
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-6">
+             {product.price > 0 ? (
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 inline-flex flex-col">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Standard Price</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-slate-900">₹{product.price.toLocaleString('en-IN')}</span>
+                      <span className="text-slate-400 font-bold text-xs">/ unit</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1">Inclusive of all taxes (GST)</span>
+                </div>
+             ) : (
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 inline-flex flex-col">
+                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Price Status</span>
+                   <span className="text-xl font-bold text-slate-600 italic">Price on Request</span>
+                </div>
+             )}
+
+             {/* Stock Status */}
+             {product.stock_quantity !== undefined && (
+               <div className="flex items-center gap-2">
+                 <Package className="w-4 h-4 text-slate-400" />
+                 {product.stock_quantity > 0 ? (
+                   <span className="text-sm font-bold text-emerald-600">
+                     In Stock {product.stock_quantity <= 5 && `(Only ${product.stock_quantity} left)`}
+                   </span>
+                 ) : product.allow_backorder ? (
+                   <span className="text-sm font-bold text-amber-600">
+                     Made to Order ({product.base_lead_time_days || 5}-{(product.base_lead_time_days || 5) + (product.manufacturing_buffer_days || 7)} days)
+                   </span>
+                 ) : (
+                   <span className="text-sm font-bold text-red-500">Out of Stock</span>
+                 )}
+               </div>
+             )}
+
+             <div className="flex flex-wrap gap-4">
+                {product.price > 0 && (
+                  <Button 
+                    size="lg" 
+                    onClick={handleAddToCart} 
+                    disabled={isAdding} 
+                    className="flex-1 md:flex-none h-14 px-8 gap-3 bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-900/10 text-base font-bold rounded-xl"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    {isAdding ? "Item Added" : "Add to Cart"}
+                  </Button>
+                )}
+                
+                <Link 
+                   href={`/enquiry?product=${encodeURIComponent(product.name)}`}
+                   className={product.price > 0 ? "flex-1 md:flex-none" : "w-full"}
+                >
+                  <Button 
+                    variant={product.price > 0 ? "outline" : "default"} 
+                    size="lg" 
+                    className={`h-14 px-8 gap-3 font-bold rounded-xl w-full ${product.price > 0 ? 'border-slate-200 text-slate-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    Get Special Quote
+                  </Button>
+                </Link>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    onClick={handleWishlist} 
+                    disabled={isPending}
+                    className={`h-14 px-6 border-slate-200 rounded-xl ${wishlisted ? "text-rose-600 border-rose-200 bg-rose-50" : ""}`}
+                  >
+                    <Heart className={`h-5 w-5 ${wishlisted ? "fill-rose-600" : ""}`} />
+                  </Button>
+                  <Button variant="outline" size="lg" onClick={handleShare} className="h-14 px-6 border-slate-200 rounded-xl">
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
+             </div>
+
+             {/* Pincode Serviceability Check */}
+             <PincodeCheck weight={product.weight_kg || 1} />
+          </div>
+        )}
+      </div>
 
       {/* Product Brochure */}
       {product.pdf_url && (

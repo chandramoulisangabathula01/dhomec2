@@ -140,6 +140,11 @@ export default async function UserOrdersPage() {
                                          className="rounded-xl font-bold text-[10px] uppercase tracking-widest border-2 h-10 px-5 gap-2 hover:bg-slate-50 transition-all border-orange-100 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                                      />
                                 )}
+                                <Link href={`/orders/${order.id}/success?payment_id=${order.razorpay_payment_id || 'manual'}`}>
+                                    <Button variant="ghost" className="rounded-xl font-bold text-[10px] uppercase tracking-widest h-10 px-5 hover:bg-slate-50 transition-all text-blue-600">
+                                        View Confirmation
+                                    </Button>
+                                </Link>
                                 <Link href={`/orders/${order.id}`}>
                                     <Button className="rounded-xl font-black text-[11px] uppercase tracking-widest bg-slate-900 text-white hover:bg-black group-hover:translate-x-1 transition-all h-10 px-6">
                                         Track Lifecycle <ArrowRight className="w-4 h-4 ml-2" />

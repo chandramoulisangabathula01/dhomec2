@@ -70,17 +70,37 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
   const config = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.PLACED;
   const StatusIcon = config.icon;
 
+  /* Shipping Logic */
+  const [showShippingModal, setShowShippingModal] = useState(false);
+  const [shippingDetails, setShippingDetails] = useState({
+      provider: 'MANUAL',
+      awb_code: '',
+      tracking_url: '',
+      shipped_date: new Date().toISOString().split('T')[0]
+  });
+
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
+    // Intercept Shipping
+    if (newStatus === 'SHIPPED') {
+        setShowShippingModal(true);
+        return;
+    }
+
     if (!confirm(`Switch order status to ${newStatus}?`)) return;
-    
+    performUpdate(newStatus);
+  };
+
+  const performUpdate = async (newStatus: OrderStatus, extraData?: any) => {
     setUpdating(true);
     try {
-      await updateOrderStatus(order.id, newStatus);
+      await updateOrderStatus(order.id, newStatus, extraData);
       setOrder(prev => ({ 
           ...prev, 
           status: newStatus, 
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString(),
+          shipping_info: extraData || prev.shipping_info
       }));
+      setShowShippingModal(false);
       router.refresh(); 
     } catch (error: any) {
       alert(error.message || "Update failed");
@@ -89,12 +109,90 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
     }
   };
 
+  const submitShipping = (e: React.FormEvent) => {
+      e.preventDefault();
+      performUpdate('SHIPPED', shippingDetails);
+  };
+
   const shippingAddress = order.shipping_address;
   const items = order.order_items || order.items || [];
   const nextActions = validTransitions[currentStatus] || [];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-20 animate-in fade-in duration-700">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 animate-in fade-in duration-700 relative">
+      
+      {/* Shipping Modal Overlay */}
+      {showShippingModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-6 opacity-5">
+                      <Truck className="w-32 h-32" />
+                  </div>
+                  
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1 relative z-10">Dispatch Order</h3>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 relative z-10">Enter Logistics Details</p>
+
+                  <form onSubmit={submitShipping} className="space-y-4 relative z-10">
+                      <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Logistics Provider</label>
+                          <select 
+                            className="w-full h-10 rounded-xl border-slate-200 bg-slate-50 text-sm font-bold text-slate-700 focus:ring-blue-500 focus:border-blue-500"
+                            value={shippingDetails.provider}
+                            onChange={(e) => setShippingDetails({...shippingDetails, provider: e.target.value})}
+                          >
+                              <option value="MANUAL">Manual / Private Courier</option>
+                              <option value="DELHIVERY">Delhivery</option>
+                              <option value="SHIPROCKET">Shiprocket</option>
+                              <option value="DTDC">DTDC</option>
+                              <option value="BLUEDART">Blue Dart</option>
+                          </select>
+                      </div>
+
+                      <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">AWB / Tracking Number</label>
+                          <input 
+                              required
+                              type="text"
+                              className="w-full h-10 px-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-bold text-slate-900 placeholder:font-medium placeholder:text-slate-300"
+                              placeholder="e.g. 1234567890"
+                              value={shippingDetails.awb_code}
+                              onChange={(e) => setShippingDetails({...shippingDetails, awb_code: e.target.value})}
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tracking URL (Optional)</label>
+                          <input 
+                              type="url"
+                              className="w-full h-10 px-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm font-bold text-slate-900 placeholder:font-medium placeholder:text-slate-300"
+                              placeholder="https://track.courier.com/..."
+                              value={shippingDetails.tracking_url}
+                              onChange={(e) => setShippingDetails({...shippingDetails, tracking_url: e.target.value})}
+                          />
+                      </div>
+
+                      <div className="pt-4 flex gap-3">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="flex-1 rounded-xl font-bold h-11"
+                            onClick={() => setShowShippingModal(false)}
+                          >
+                              Cancel
+                          </Button>
+                          <Button 
+                            type="submit" 
+                            disabled={updating}
+                            className="flex-1 rounded-xl font-bold h-11 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+                          >
+                              {updating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Truck className="w-4 h-4 mr-2" />}
+                              Confirm Dispatch
+                          </Button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
       
       {/* Dynamic Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden">
@@ -249,6 +347,15 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Total Transaction Value</p>
                         <p className="text-xs text-slate-500 font-medium italic">Net including all applied logistics</p>
+                        
+                        {(order.tax_breakdown || true) && (
+                           <div className="mt-4 pt-4 border-t border-slate-700/50 space-y-1">
+                               <div className="flex gap-4 text-[10px] uppercase tracking-widest text-slate-500">
+                                   <span>CGST (9%): <span className="text-slate-300">₹{(order.tax_breakdown?.cgst || ((order.total_amount - (order.total_amount/1.18))/2)).toFixed(2)}</span></span>
+                                   <span>SGST (9%): <span className="text-slate-300">₹{(order.tax_breakdown?.sgst || ((order.total_amount - (order.total_amount/1.18))/2)).toFixed(2)}</span></span>
+                               </div>
+                           </div>
+                        )}
                     </div>
                     <span className="text-4xl font-black text-blue-400 tracking-tighter italic">₹{Number(order.total_amount).toLocaleString()}</span>
                 </div>
@@ -344,6 +451,59 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
                     </div>
                 </div>
             </div>
+
+            {/* Logistics Manifest */}
+            {order.shipping_info && (
+                <div className="bg-white rounded-[32px] border border-slate-200 p-8 shadow-sm">
+                    <h3 className="font-black text-slate-500 text-[10px] uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-orange-500" />
+                        Logistics Manifest
+                    </h3>
+                    
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                            <span className="text-[10px] font-black uppercase text-orange-400">Carrier</span>
+                            <span className="font-black text-xs text-slate-900 uppercase">
+                                {order.shipping_info.provider}
+                            </span>
+                        </div>
+
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Waybill Reference</p>
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                                <span className="font-mono text-sm font-bold text-slate-900 select-all tracking-tight">
+                                    {order.shipping_info.awb_code || 'N/A'}
+                                </span>
+                                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                            </div>
+                        </div>
+
+                        {order.shipping_info.tracking_url && (
+                            <a 
+                                href={order.shipping_info.tracking_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full h-12 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                            >
+                                Track Consignment
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        )}
+
+                        {order.shipping_info.label_url && (
+                            <a 
+                                href={order.shipping_info.label_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full h-12 bg-white text-slate-900 border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-sm"
+                            >
+                                Download Label
+                                <Printer className="w-3 h-3" />
+                            </a>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Financial Metadata */}
              <div className="bg-slate-900 rounded-[32px] p-8 shadow-xl text-white relative overflow-hidden">

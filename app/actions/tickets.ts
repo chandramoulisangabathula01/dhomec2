@@ -81,7 +81,7 @@ export async function getTicketDetails(ticketId: string) {
   // Access Control
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   
-  if (ticket.user_id !== user.id && profile?.role !== "admin") {
+  if (ticket.user_id !== user.id && !['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any)) {
       return null; 
   }
 
@@ -100,7 +100,7 @@ export async function addMessage(ticketId: string, message: string) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  const isStaff = profile?.role === "admin";
+  const isStaff = ['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any);
 
   const { error } = await supabase
     .from("ticket_messages")
@@ -110,6 +110,29 @@ export async function addMessage(ticketId: string, message: string) {
       message,
       is_staff_reply: isStaff
     });
+
+  if (isStaff && !error) {
+      // Send Email Notification to User
+      try {
+          const { data: ticket } = await supabase
+            .from('tickets')
+            .select('user:profiles!user_id(email, full_name)')
+            .eq('id', ticketId)
+            .single();
+            
+           if (ticket?.user) {
+               const userObj: any = Array.isArray(ticket.user) ? ticket.user[0] : ticket.user;
+               if (userObj.email) {
+                   const { TicketReplyEmail } = await import("@/lib/email-templates");
+                   const { sendEmail } = await import("@/lib/notifications");
+                   const emailHtml = TicketReplyEmail(ticketId, userObj.full_name || 'Customer', message);
+                   await sendEmail(userObj.email, `New Reply on Ticket #${ticketId.slice(0, 8)}`, emailHtml);
+               }
+           }
+      } catch (notifyError) {
+          console.error("Failed to send ticket reply notification:", notifyError);
+      }
+  }
 
 
   if (error) {
@@ -140,8 +163,8 @@ export async function updateTicketStatus(ticketId: string, status: string) {
       .eq("id", user.id)
       .single();
   
-    if (profile?.role !== "admin") {
-      throw new Error("Only admins can update ticket status");
+    if (!['SUPER_ADMIN', 'SUPPORT_STAFF'].includes(profile?.role as any)) {
+      throw new Error("Only authorized staff can update ticket status");
     }
   
     const { error } = await supabase

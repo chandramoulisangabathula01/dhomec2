@@ -26,6 +26,8 @@ function EnquiryContent() {
   const router = useRouter();
   const supabase = createClient();
   const productName = searchParams.get('product') || "";
+  const enquiryType = searchParams.get('type') || "";
+  const isMeasurement = enquiryType === 'measurement';
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -35,14 +37,53 @@ function EnquiryContent() {
       name: "",
       phone: "",
       company: "",
-      message: productName ? `Consultation regarding ${productName}` : ""
+      preferred_date: "",
+      site_photos: [] as File[],
+      message: isMeasurement 
+        ? `I would like to book a professional measurement for ${productName || 'this product'}. Please contact me to schedule a visit.`
+        : (productName ? `Consultation regarding ${productName}` : "")
   });
 
+  const [uploading, setUploading] = useState(false);
+
   useEffect(() => {
-    if (productName) {
-        setFormData(prev => ({ ...prev, message: `Consultation regarding ${productName}` }));
+    if (productName || enquiryType) {
+        setFormData(prev => ({ 
+            ...prev, 
+            message: isMeasurement 
+                ? `I would like to book a professional measurement for ${productName || 'this product'}. Please contact me to schedule a visit.`
+                : (productName ? `Consultation regarding ${productName}` : prev.message)
+        }));
     }
-  }, [productName]);
+  }, [productName, enquiryType, isMeasurement]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+          setFormData(prev => ({ ...prev, site_photos: Array.from(e.target.files!) }));
+      }
+  };
+
+  const uploadFiles = async (files: File[]) => {
+      const urls: string[] = [];
+      for (const file of files) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `${fileName}`;
+          
+          const { error: uploadError } = await supabase.storage
+              .from('enquiry-attachments')
+              .upload(filePath, file);
+
+          if (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              continue; 
+          }
+
+          const { data: { publicUrl } } = supabase.storage.from('enquiry-attachments').getPublicUrl(filePath);
+          urls.push(publicUrl);
+      }
+      return urls;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -51,25 +92,60 @@ function EnquiryContent() {
       setSuccess(false);
 
       try {
+          // Upload Files First
+          setUploading(true);
+          const photoUrls = await uploadFiles(formData.site_photos);
+          setUploading(false);
+
           // Check if user is logged in to associate user_id if possible
           const { data: { user } } = await supabase.auth.getUser();
 
-          const { error: insertError } = await supabase
+          if (user) {
+             // Authenticated: Create a Support Ticket directly
+             const { error: ticketError } = await supabase
+              .from('tickets')
+              .insert([{
+                  user_id: user.id,
+                  type: isMeasurement ? 'MEASUREMENT_REQ' : 'GENERAL_QUERY',
+                  subject: isMeasurement ? `Measurement Request: ${productName}` : (formData.company ? `B2B Enquiry from ${formData.company}` : `Enquiry: ${formData.name}`),
+                  status: 'OPEN',
+                  priority: isMeasurement ? 'high' : 'normal',
+                  metadata: {
+                      phone: formData.phone,
+                      company: formData.company,
+                      product_interest: productName,
+                      initial_message: formData.message,
+                      preferred_date: formData.preferred_date,
+                      site_photos: photoUrls
+                  }
+              }]);
+             if (ticketError) throw ticketError;
+          } else {
+             // Guest: Create standard enquiry
+             // Append metadata to message for Guest Enquiries as schema might not support metadata column yet
+             let enhancedMessage = formData.message || "";
+             if (formData.preferred_date) enhancedMessage += `\n\n[Preferred Date: ${formData.preferred_date}]`;
+             if (photoUrls.length > 0) enhancedMessage += `\n\n[Site Photos]:\n${photoUrls.join('\n')}`;
+
+             const { error: insertError } = await supabase
               .from('enquiries')
               .insert([{
-                  user_id: user?.id || null, // Optional user association
+                  user_id: null,
                   name: formData.name,
                   phone: formData.phone,
                   company: formData.company || null,
-                  message: formData.message || null,
+                  message: enhancedMessage,
                   product_interest: productName || null,
-                  status: 'new'
+                  status: 'new',
+                  subject: isMeasurement ? `[MEASUREMENT] ${productName}` : `[WEB] ${formData.name}`
               }]);
+             if (insertError) throw insertError;
+          }
 
-          if (insertError) throw insertError;
+
 
           setSuccess(true);
-          setFormData({ name: "", phone: "", company: "", message: "" });
+          setFormData({ name: "", phone: "", company: "", message: "", preferred_date: "", site_photos: [] });
           
           // Smooth scroll to top to see success message
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -106,8 +182,8 @@ function EnquiryContent() {
                         Professional Consultation
                      </div>
                      <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        Strategic <span className="text-blue-500 italic">Excellence.</span><br/>
-                        Request Consultation.
+                        {isMeasurement ? 'Precision' : 'Strategic'} <span className="text-blue-500 italic">{isMeasurement ? 'Fitting.' : 'Excellence.'}</span><br/>
+                        {isMeasurement ? 'Book Measurement.' : 'Request Consultation.'}
                      </h1>
                      <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700">
                         Connect with our engineering team for high-level infrastructure solutions and product specifications. Most sequences are processed within 120 minutes.
@@ -229,7 +305,6 @@ function EnquiryContent() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Organizational Entity (Optional)</label>
                                     <div className="relative group">
                                         <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                         <input 
@@ -239,6 +314,36 @@ function EnquiryContent() {
                                             onChange={e => setFormData({...formData, company: e.target.value})}
                                             className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl pl-14 pr-6 font-bold text-slate-900 transition-all outline-none"
                                         />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Preferred Date</label>
+                                        <div className="relative group">
+                                            <input 
+                                                type="date"
+                                                value={formData.preferred_date}
+                                                onChange={e => setFormData({...formData, preferred_date: e.target.value})}
+                                                className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl px-6 font-bold text-slate-900 transition-all outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Site Photos (Optional)</label>
+                                        <div className="relative group">
+                                            <input 
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                                className="w-full h-16 bg-slate-50 border-2 border-transparent focus:border-blue-500 rounded-3xl px-6 py-4 font-bold text-slate-900 transition-all outline-none file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            />
+                                            {formData.site_photos.length > 0 && (
+                                                <p className="absolute -bottom-6 left-2 text-[10px] text-slate-400 font-bold">{formData.site_photos.length} files selected</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

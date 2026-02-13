@@ -30,6 +30,18 @@ This is the most critical step to connect your deployed site to Supabase.
 
    > **Note:** You can find these values in your Supabase Dashboard under **Project Settings** > **API**.
 
+   ### Additional Required Variables (New)
+   
+   | Key | Description | Example |
+   | :--- | :--- | :--- |
+   | `NEXT_PUBLIC_APP_URL` | Your deployed site URL (for emails) | `https://dhomec.netlify.app` |
+   | `SMTP_HOST` | Email Provider Host (e.g., Gmail) | `smtp.gmail.com` |
+   | `SMTP_PORT` | Email Provider Port | `587` |
+   | `SMTP_USER` | Email Address used for sending | `support@dhomec.com` |
+   | `SMTP_PASS` | Email App Password | `xxxx-xxxx-xxxx-xxxx` |
+   | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay Key ID | `rzp_test_...` |
+   | `RAZORPAY_KEY_SECRET` | Razorpay Key Secret | `abc123xyz...` |
+
 ## 4. Deploy
 1. Click **"Deploy site"**.
 2. Netlify will run the build process. You can view the deployment logs to monitor progress.
