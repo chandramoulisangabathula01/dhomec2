@@ -1,49 +1,72 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 
-// Verify Shiprocket webhook authenticity
-// Typically Shiprocket sends a header `x-shiprocket-token` if configured in settings.
-// Or we can verify by checking if the order exists.
-const WEBHOOK_SECRET = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+// Force this route to be dynamic (no static caching)
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  return NextResponse.json({ 
+    status: "active", 
+    message: "Shiprocket Webhook Listener is ready" 
+  }, { status: 200 });
+}
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
-    // Verify signature if secret is set
-    if (WEBHOOK_SECRET) {
-      const signature = req.headers.get("x-api-key");
-      if (signature !== WEBHOOK_SECRET) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    
+    // 1. Verify Authentication (x-api-key)
+    const token = req.headers.get("x-api-key");
+    const secret = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+    
+    if (secret && token !== secret) {
+      console.warn("[Webhook] Unauthorized access attempt:", token);
+      // Shiprocket requires 200 OK even on failure to avoid disabling webhook
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 200 });
     }
 
     const body = JSON.parse(rawBody);
-    const { current_status, order_id, channel_order_id, awb, courier_name, shipment_id } = body;
+    console.log("[Webhook] Received Event:", JSON.stringify(body, null, 2));
 
-    // Determine the internal order ID (UUID)
-    // Shiprocket usually returns the channel's order ID in 'channel_order_id' or 'order_id'
-    // Our ID is a UUID string.
-    let internalOrderId = channel_order_id || order_id;
+    const { 
+      current_status, 
+      order_id, 
+      channel_order_id, 
+      awb, 
+      courier_name, 
+      shipment_id,
+      scans 
+    } = body;
+
+    // 2. Extract UUID from order_id (Handle composite IDs like "12345_UUID")
+    let internalOrderId = null;
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+    // Check channel_order_id first
+    if (channel_order_id) {
+      const match = String(channel_order_id).match(uuidRegex);
+      if (match) internalOrderId = match[0];
+    }
     
-    // Basic validation: UUID format check (optional but good for safety)
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(internalOrderId);
-    if (!isUuid && channel_order_id) {
-        // Retry channel_order_id specifically if order_id was numeric
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channel_order_id)) {
-            internalOrderId = channel_order_id;
-        }
+    // Check order_id if not found yet
+    if (!internalOrderId && order_id) {
+      const match = String(order_id).match(uuidRegex);
+      if (match) internalOrderId = match[0];
+    }
+
+    // Fallback: Use order_id as is if no UUID found
+    if (!internalOrderId && order_id) {
+      internalOrderId = order_id; 
     }
 
     if (!internalOrderId) {
-      console.error("[Shiprocket Webhook] Missing order ID:", body);
-      return NextResponse.json({ error: "Missing order ID" }, { status: 400 });
+      console.error("[Webhook] No valid order_id found in payload");
+      return NextResponse.json({ success: false, message: "No order ID found" }, { status: 200 });
     }
-
-    console.log(`[Shiprocket Webhook] Update for Order ${internalOrderId}: ${current_status}`);
 
     const supabase = await createClient();
 
-    // Verify order exists
+    // 3. Verify Order Exists
     const { data: order, error: orderError } = await supabase
         .from("orders")
         .select("id, status, shipping_info")
@@ -51,14 +74,15 @@ export async function POST(req: Request) {
         .single();
 
     if (orderError || !order) {
-        console.error(`[Shiprocket Webhook] Order ${internalOrderId} not found.`);
-        return NextResponse.json({ error: "Order not found" }, { status: 404 });
+        console.error(`[Webhook] Order ${internalOrderId} not found in DB.`);
+        return NextResponse.json({ success: false, message: "Order not found" }, { status: 200 });
     }
 
-    // Map status
+    // 4. Map Status
     let newStatus = null;
     const statusLower = (current_status || "").toLowerCase();
 
+    // Mapping logic based on Shiprocket status strings
     if (statusLower.includes("delivered")) {
         newStatus = "DELIVERED";
     } else if (
@@ -66,71 +90,79 @@ export async function POST(req: Request) {
         statusLower.includes("intransit") || 
         statusLower.includes("out for delivery") || 
         statusLower.includes("pickup") || 
-        statusLower.includes("shipped")
+        statusLower.includes("shipped") ||
+        statusLower.includes("in transit")
     ) {
-        newStatus = "SHIPPED"; // Or keep as SHIPPED if already there
-    } else if (statusLower.includes("rto") || statusLower.includes("cancelled")) {
-        newStatus = "CANCELLED"; // Or RETURNED if enum supports it
+        newStatus = "SHIPPED"; 
+    } else if (statusLower.includes("rto") || statusLower.includes("cancelled") || statusLower.includes("canceled")) {
+        newStatus = "CANCELLED";
     }
 
-    // Update if status changed or new shipping info
+    // Logic: Do not revert a "DELIVERED" status to "SHIPPED"
+    if (order.status === "DELIVERED" && newStatus === "SHIPPED") {
+      newStatus = null;
+    }
+
+    // 5. Update Database
+    const now = new Date().toISOString();
+    let shippingInfoUpdates: any = {};
+    
+    // Always update shipping info with latest details
+    if (awb || courier_name || shipment_id || current_status) {
+       shippingInfoUpdates = {
+          ...order.shipping_info,
+          last_update: now,
+          sr_status: current_status, // Store raw status for debugging
+          history: [
+            ...(order.shipping_info?.history || []),
+            { 
+              status: current_status, 
+              timestamp: now,
+              details: scans && scans.length > 0 ? scans[scans.length - 1] : null 
+            }
+          ]
+       };
+       if (awb) shippingInfoUpdates.awb_code = awb;
+       if (courier_name) shippingInfoUpdates.courier_name = courier_name;
+       if (shipment_id) shippingInfoUpdates.shipment_id = shipment_id;
+    }
+
+    const updates: any = {
+      updated_at: now,
+      shipping_info: shippingInfoUpdates
+    };
+
+    // Only update status if mapped and different
     if (newStatus && newStatus !== order.status) {
-        // Prepare update payload
-        const updates: any = {
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-        };
-
-        // Update shipping info if available
-        if (awb || courier_name || shipment_id) {
-            updates.shipping_info = {
-                ...order.shipping_info,
-                awb_code: awb || order.shipping_info?.awb_code,
-                courier_name: courier_name || order.shipping_info?.courier_name,
-                shipment_id: shipment_id || order.shipping_info?.shipment_id,
-                last_update: new Date().toISOString(),
-                sr_status: current_status // Keep raw status for reference
-            };
-        }
-
-        const { error: updateError } = await supabase
-            .from("orders")
-            .update(updates)
-            .eq("id", internalOrderId);
-
-        if (updateError) {
-            console.error("[Shiprocket Webhook] Update failed:", updateError);
-            return NextResponse.json({ error: "Update failed" }, { status: 500 });
-        }
-
-        // Add history
-        await supabase.from("order_status_history").insert({
-            order_id: internalOrderId,
-            status: newStatus,
-            changed_by: "system (shiprocket webhook)",
-            notes: `Status updated to ${newStatus} via Shiprocket (${current_status})`
-        });
-    } else {
-        // Just update shipping info / tracking if status didn't change (e.g. Manifested -> In Transit)
-         if (awb || courier_name || shipment_id) {
-             const updates = {
-                shipping_info: {
-                    ...order.shipping_info,
-                    awb_code: awb || order.shipping_info?.awb_code,
-                    courier_name: courier_name || order.shipping_info?.courier_name,
-                    shipment_id: shipment_id || order.shipping_info?.shipment_id,
-                    last_update: new Date().toISOString(),
-                    sr_status: current_status
-                },
-                updated_at: new Date().toISOString(),
-             };
-             await supabase.from("orders").update(updates).eq("id", internalOrderId);
-         }
+       updates.status = newStatus;
     }
 
-    return NextResponse.json({ success: true });
+    const { error: updateError } = await supabase
+        .from("orders")
+        .update(updates)
+        .eq("id", internalOrderId);
+
+    if (updateError) {
+        console.error("[Webhook] Update failed:", updateError);
+        // Log error but return 200
+        return NextResponse.json({ success: false, message: "Database update failed" }, { status: 200 });
+    }
+
+    // 6. Log History Entry if status changed
+    if (newStatus && newStatus !== order.status) {
+      await supabase.from("order_status_history").insert({
+          order_id: internalOrderId,
+          status: newStatus,
+          changed_by: "system (shiprocket)",
+          notes: `Status updated via webhook: ${current_status}`
+      });
+    }
+
+    return NextResponse.json({ success: true, message: "Processed successfully" });
+
   } catch (err: any) {
-    console.error("[Shiprocket Webhook] Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[Webhook] Critical Error:", err);
+    // Return 200 even on critical error to satisfy Shiprocket
+    return NextResponse.json({ success: false, message: "Internal server error" }, { status: 200 });
   }
 }
