@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const rawBody = await req.text();
     // Verify signature if secret is set
     if (WEBHOOK_SECRET) {
-      const signature = req.headers.get("x-shiprocket-token");
+      const signature = req.headers.get("x-api-key");
       if (signature !== WEBHOOK_SECRET) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
