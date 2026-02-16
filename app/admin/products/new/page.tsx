@@ -29,6 +29,13 @@ type Category = {
     name: string;
 };
 
+const PRICE_STATUS_OPTIONS = [
+    { value: "", label: "Standard Price" },
+    { value: "PRICE_ON_REQUEST", label: "Price on Request" },
+    { value: "MADE_TO_ORDER", label: "Made to Order (5-12 days)" },
+    { value: "GET_SPECIAL_QUOTE", label: "Get Special Quote" },
+];
+
 export default function NewProductPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -45,6 +52,7 @@ export default function NewProductPage() {
     sku: "",
     stock_quantity: "",
     min_quantity: "",
+    min_stock_threshold: "",
     description: "",
     price: "",
     tax: "",
@@ -61,7 +69,8 @@ export default function NewProductPage() {
     weight_kg: "",
     dimensions: { length: "", breadth: "", height: "" },
     zakeke_template_id: "",
-    seo: { title: "", desc: "" }
+    seo: { title: "", desc: "" },
+    price_status: "",
   });
 
   // Fetch Categories
@@ -145,7 +154,8 @@ export default function NewProductPage() {
             images: formData.images.map(url => formatGDriveUrl(url)),
             price: formData.price ? parseFloat(formData.price) : 0,
             stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
-            min_stock_threshold: formData.min_quantity ? parseInt(formData.min_quantity) : 0,
+            min_quantity: formData.min_quantity ? parseInt(formData.min_quantity) : 0,
+            min_stock_threshold: formData.min_stock_threshold ? parseInt(formData.min_stock_threshold) : 0,
             brand: formData.brand,
             units: formData.units,
             sku: formData.sku,
@@ -164,7 +174,8 @@ export default function NewProductPage() {
                 height: formData.dimensions.height ? parseFloat(formData.dimensions.height) : 0,
             },
             zakeke_template_id: formData.zakeke_template_id,
-            seo: formData.seo
+            seo: formData.seo,
+            price_status: formData.price_status || null,
         };
 
         const { error } = await supabase.from('products').insert([payload]);
@@ -223,6 +234,23 @@ export default function NewProductPage() {
                                 <p className="text-[10px] opacity-70">Requires measurement/quote</p>
                             </div>
                         </button>
+                    </div>
+                </div>
+
+                {/* Price Status */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Price Status</label>
+                    <div className="relative">
+                        <select 
+                            value={formData.price_status}
+                            onChange={(e) => setFormData({...formData, price_status: e.target.value})}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-500 text-sm font-bold appearance-none cursor-pointer"
+                        >
+                            {PRICE_STATUS_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
                 </div>
 
@@ -302,6 +330,17 @@ export default function NewProductPage() {
                             </div>
                     </div>
 
+                    {/* Sub Category (Optional) */}
+                    <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sub Category <span className="text-slate-300">(Optional)</span></label>
+                            <input 
+                                value={formData.sub_category}
+                                onChange={(e) => setFormData({...formData, sub_category: e.target.value})}
+                                placeholder="Enter sub category"
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold placeholder:font-medium placeholder:text-slate-300"
+                            />
+                    </div>
+
                     {/* Brand */}
                     <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Brand</label>
@@ -329,12 +368,41 @@ export default function NewProductPage() {
                             <input type="number" value={formData.tax} onChange={(e) => setFormData({...formData, tax: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                          </div>
                          <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Discount (%)</label>
+                            <input type="number" value={formData.discount} onChange={(e) => setFormData({...formData, discount: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Stock</label>
                             <input type="number" value={formData.stock_quantity} onChange={(e) => setFormData({...formData, stock_quantity: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
                          </div>
                          <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">SKU</label>
                             <input value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Min Order Qty</label>
+                            <input type="number" value={formData.min_quantity} onChange={(e) => setFormData({...formData, min_quantity: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Min Stock Threshold</label>
+                            <input type="number" value={formData.min_stock_threshold} onChange={(e) => setFormData({...formData, min_stock_threshold: e.target.value})} placeholder="Alert when below" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold placeholder:text-slate-300 placeholder:font-medium" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Units</label>
+                            <div className="relative">
+                                <select 
+                                    value={formData.units}
+                                    onChange={(e) => setFormData({...formData, units: e.target.value})}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold appearance-none cursor-pointer"
+                                >
+                                    <option value="">Unit</option>
+                                    <option value="pcs">Pieces</option>
+                                    <option value="set">Set</option>
+                                    <option value="kg">Kg</option>
+                                    <option value="mtr">Meter</option>
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                            </div>
                          </div>
                     </div>
 

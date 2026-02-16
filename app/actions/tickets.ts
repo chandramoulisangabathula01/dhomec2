@@ -68,6 +68,7 @@ export async function getTicketDetails(ticketId: string) {
     .from("tickets")
     .select(`
         *,
+        profile:profiles!user_id(full_name, avatar_url, email),
         ticket_messages (
             *,
             profiles (full_name, avatar_url)

@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { 
     ArrowLeft,
     Loader2, 
-    Upload, 
     CloudUpload,
     ChevronDown, 
     Trash2,
+    Box,
+    Truck,
+    Type
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +29,13 @@ type Category = {
     id: string;
     name: string;
 };
+
+const PRICE_STATUS_OPTIONS = [
+    { value: "", label: "Standard Price" },
+    { value: "PRICE_ON_REQUEST", label: "Price on Request" },
+    { value: "MADE_TO_ORDER", label: "Made to Order (5-12 days)" },
+    { value: "GET_SPECIAL_QUOTE", label: "Get Special Quote" },
+];
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -48,6 +57,7 @@ export default function EditProductPage() {
     sku: "",
     stock_quantity: "",
     min_quantity: "",
+    min_stock_threshold: "",
     description: "",
     price: "",
     tax: "",
@@ -58,7 +68,15 @@ export default function EditProductPage() {
     pdf_url: "",
     is_featured: false,
     three_d_model_url: "",
-    zakeke_template_id: ""
+    
+    // PRD Fields (matching New Product form)
+    type: "DIRECT_SALE",
+    hsn_code: "",
+    weight_kg: "",
+    dimensions: { length: "", breadth: "", height: "" },
+    zakeke_template_id: "",
+    seo: { title: "", desc: "" },
+    price_status: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +97,10 @@ export default function EditProductPage() {
          // Product
          const isDemoLocal = localStorage.getItem("dhomec_demo_auth") === "true";
          if (isDemoLocal) {
-             // Mock
              setFormData({
-                 name: "Demo Product", slug: "demo-product", category_id: "1", sub_category: "Boom Barriers", brand: "Demo", units: "pcs", sku: "DEMO-123", stock_quantity: "100", min_quantity: "5", description: "Demo Desc", 
-                 price: "50000", tax: "18", discount: "0", status: "open", image_url: "", images: [], pdf_url: "", is_featured: true, three_d_model_url: "", zakeke_template_id: ""
+                 name: "Demo Product", slug: "demo-product", category_id: "1", sub_category: "Boom Barriers", brand: "Demo", units: "pcs", sku: "DEMO-123", stock_quantity: "100", min_quantity: "5", min_stock_threshold: "10", description: "Demo Desc", 
+                 price: "50000", tax: "18", discount: "0", status: "open", image_url: "", images: [], pdf_url: "", is_featured: true, three_d_model_url: "",
+                 type: "DIRECT_SALE", hsn_code: "84798999", weight_kg: "15", dimensions: { length: "100", breadth: "50", height: "30" }, zakeke_template_id: "", seo: { title: "", desc: "" }, price_status: ""
              });
              setLoading(false);
              return;
@@ -97,6 +115,8 @@ export default function EditProductPage() {
          if (fetchError) {
              setError("Product not found");
          } else if (product) {
+             const dims = product.dimensions || {};
+             const seo = product.seo || {};
              setFormData({
                  name: product.name || "",
                  slug: product.slug || "",
@@ -107,6 +127,7 @@ export default function EditProductPage() {
                  sku: product.sku || "",
                  stock_quantity: product.stock_quantity ? String(product.stock_quantity) : "",
                  min_quantity: product.min_quantity ? String(product.min_quantity) : "",
+                 min_stock_threshold: product.min_stock_threshold ? String(product.min_stock_threshold) : "",
                  description: product.description || "",
                  price: product.price ? String(product.price) : "",
                  tax: product.tax ? String(product.tax) : "",
@@ -117,13 +138,32 @@ export default function EditProductPage() {
                  pdf_url: product.pdf_url || "",
                  is_featured: product.is_featured || false,
                  three_d_model_url: product.three_d_model_url || "",
-                 zakeke_template_id: product.zakeke_template_id || ""
+                 type: product.type || "DIRECT_SALE",
+                 hsn_code: product.hsn_code || "",
+                 weight_kg: product.weight_kg ? String(product.weight_kg) : "",
+                 dimensions: {
+                     length: dims.length ? String(dims.length) : "",
+                     breadth: dims.breadth ? String(dims.breadth) : "",
+                     height: dims.height ? String(dims.height) : "",
+                 },
+                 zakeke_template_id: product.zakeke_template_id || "",
+                 seo: {
+                     title: seo.title || "",
+                     desc: seo.desc || "",
+                 },
+                 price_status: product.price_status || "",
              });
          }
          setLoading(false);
     };
     fetchData();
   }, [id]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    setFormData({ ...formData, name, slug });
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isCover: boolean = false) => {
     try {
@@ -187,17 +227,24 @@ export default function EditProductPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error("Please login.");
 
+        if (!formData.name || !formData.category_id) {
+            setError("Please fill in required fields (Name, Category)");
+            setSubmitting(false);
+            return;
+        }
+
         const payload = {
             name: formData.name,
             slug: formData.slug,
             category_id: formData.category_id,
-            sub_category: formData.sub_category,
+            sub_category: formData.sub_category || null,
             description: formData.description,
             image_url: formatGDriveUrl(formData.image_url),
             images: formData.images.map(url => formatGDriveUrl(url)),
             price: formData.price ? parseFloat(formData.price) : 0,
             stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
             min_quantity: formData.min_quantity ? parseInt(formData.min_quantity) : 0,
+            min_stock_threshold: formData.min_stock_threshold ? parseInt(formData.min_stock_threshold) : 0,
             brand: formData.brand,
             units: formData.units,
             sku: formData.sku,
@@ -206,7 +253,19 @@ export default function EditProductPage() {
             status: formData.status,
             is_featured: formData.is_featured,
             three_d_model_url: formData.three_d_model_url || null,
-            zakeke_template_id: formData.zakeke_template_id || null
+            
+            // PRD Fields
+            type: formData.type,
+            hsn_code: formData.hsn_code,
+            weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : 0,
+            dimensions: {
+                length: formData.dimensions.length ? parseFloat(formData.dimensions.length) : 0,
+                breadth: formData.dimensions.breadth ? parseFloat(formData.dimensions.breadth) : 0,
+                height: formData.dimensions.height ? parseFloat(formData.dimensions.height) : 0,
+            },
+            zakeke_template_id: formData.zakeke_template_id || null,
+            seo: formData.seo,
+            price_status: formData.price_status || null,
         };
 
         const { error: updateError } = await supabase
@@ -237,14 +296,18 @@ export default function EditProductPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
-      <div className="mb-8 flex items-center gap-4">
-        <Link href="/admin/products">
-            <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
-        <div>
-            <h1 className="text-2xl font-bold text-foreground">Edit Product</h1>
-            <p className="text-muted-foreground">Update product details.</p>
+    <div className="max-w-[1600px] mx-auto pb-20 animate-in fade-in duration-500">
+      
+      {/* Header */}
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+            <Link href="/admin/products">
+                <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
+            </Link>
+            <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Edit Product</h1>
+                <p className="text-sm font-bold text-slate-400 mt-1">Update product details</p>
+            </div>
         </div>
       </div>
 
@@ -264,9 +327,55 @@ export default function EditProductPage() {
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
             
-            {/* Left Column: Cover Image */}
+            {/* Left Column: Cover Image & Type */}
             <div className="lg:col-span-4 xl:col-span-3 space-y-6">
                 
+                {/* Product Type Selection */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Product Type</label>
+                    <div className="flex flex-col gap-2">
+                        <button 
+                            type="button"
+                            onClick={() => setFormData({...formData, type: "DIRECT_SALE"})}
+                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${formData.type === "DIRECT_SALE" ? "bg-white border-[#4C63FC] shadow-md text-[#4C63FC]" : "bg-transparent border-transparent hover:bg-white text-slate-500"}`}
+                        >
+                            <Box className="w-5 h-5" />
+                            <div className="text-left">
+                                <p className="text-xs font-bold">Direct Sale</p>
+                                <p className="text-[10px] opacity-70">Standard e-commerce item</p>
+                            </div>
+                        </button>
+                        <button 
+                            type="button"
+                             onClick={() => setFormData({...formData, type: "CONSULTATION_ONLY"})}
+                             className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${formData.type === "CONSULTATION_ONLY" ? "bg-white border-[#4C63FC] shadow-md text-[#4C63FC]" : "bg-transparent border-transparent hover:bg-white text-slate-500"}`}
+                        >
+                            <Type className="w-5 h-5" />
+                            <div className="text-left">
+                                <p className="text-xs font-bold">Consultation</p>
+                                <p className="text-[10px] opacity-70">Requires measurement/quote</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Price Status */}
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Price Status</label>
+                    <div className="relative">
+                        <select 
+                            value={formData.price_status}
+                            onChange={(e) => setFormData({...formData, price_status: e.target.value})}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-500 text-sm font-bold appearance-none cursor-pointer"
+                        >
+                            {PRICE_STATUS_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Cover Image</label>
                     
@@ -295,6 +404,7 @@ export default function EditProductPage() {
                             <>
                                 <img src={formData.image_url} alt="Cover" className="w-full h-full object-cover" />
                                 <button 
+                                    type="button"
                                     onClick={() => setFormData({...formData, image_url: ""})}
                                     className="absolute top-2 right-2 p-1.5 bg-white/90 text-slate-500 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 hover:text-red-500"
                                 >
@@ -329,11 +439,11 @@ export default function EditProductPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     
                     {/* Product Name */}
-                    <div>
+                    <div className="md:col-span-2">
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Product Name</label>
                             <input 
                                 value={formData.name}
-                                onChange={(e) => setFormData({...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')})}
+                                onChange={handleNameChange}
                                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold placeholder:font-medium placeholder:text-slate-300"
                             />
                     </div>
@@ -354,23 +464,15 @@ export default function EditProductPage() {
                             </div>
                     </div>
 
-                    {/* Sub Category */}
+                    {/* Sub Category (Optional - text input) */}
                     <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sub Category</label>
-                            <div className="relative">
-                                <select 
-                                    value={formData.sub_category}
-                                    onChange={(e) => setFormData({...formData, sub_category: e.target.value})}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-500 text-sm font-bold appearance-none cursor-pointer"
-                                >
-                                    <option value="">Choose Sub Category</option>
-                                    <option value="Boom Barriers">Boom Barriers</option>
-                                    <option value="Gate Motors">Gate Motors</option>
-                                    <option value="Turnstiles">Turnstiles</option>
-                                    <option value="test">Test Sub Cat</option>
-                                </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                            </div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sub Category <span className="text-slate-300">(Optional)</span></label>
+                            <input 
+                                value={formData.sub_category}
+                                onChange={(e) => setFormData({...formData, sub_category: e.target.value})}
+                                placeholder="Enter sub category"
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold placeholder:font-medium placeholder:text-slate-300"
+                            />
                     </div>
 
                     {/* Brand */}
@@ -384,110 +486,99 @@ export default function EditProductPage() {
                             />
                     </div>
 
-                    {/* Units */}
-                    <div>
+                    {/* Price & Inventory Section */}
+                    <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                         <div className="col-span-2 md:col-span-4 mb-2">
+                            <h3 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                                <Box className="w-4 h-4 text-[#4C63FC]" /> Pricing & Inventory
+                            </h3>
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price (₹)</label>
+                            <input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tax (%)</label>
+                            <input type="number" value={formData.tax} onChange={(e) => setFormData({...formData, tax: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Discount (%)</label>
+                            <input type="number" value={formData.discount} onChange={(e) => setFormData({...formData, discount: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Stock</label>
+                            <input type="number" value={formData.stock_quantity} onChange={(e) => setFormData({...formData, stock_quantity: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">SKU</label>
+                            <input value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Min Order Qty</label>
+                            <input type="number" value={formData.min_quantity} onChange={(e) => setFormData({...formData, min_quantity: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Min Stock Threshold</label>
+                            <input type="number" value={formData.min_stock_threshold} onChange={(e) => setFormData({...formData, min_stock_threshold: e.target.value})} placeholder="Alert when below" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold placeholder:text-slate-300 placeholder:font-medium" />
+                         </div>
+                         <div>
                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Units</label>
                             <div className="relative">
                                 <select 
                                     value={formData.units}
                                     onChange={(e) => setFormData({...formData, units: e.target.value})}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-500 text-sm font-bold appearance-none cursor-pointer"
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold appearance-none cursor-pointer"
                                 >
-                                    <option value="">Choose Unit</option>
+                                    <option value="">Unit</option>
                                     <option value="pcs">Pieces</option>
                                     <option value="set">Set</option>
                                     <option value="kg">Kg</option>
                                     <option value="mtr">Meter</option>
                                 </select>
-                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
                             </div>
+                         </div>
                     </div>
 
-                    {/* SKU */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">SKU</label>
-                            <input 
-                                value={formData.sku}
-                                onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold"
-                            />
+                    {/* Logistics Section */}
+                    <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                         <div className="col-span-2 md:col-span-4 mb-2">
+                            <h3 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                                <Truck className="w-4 h-4 text-[#4C63FC]" /> Logistics & Dimensions
+                            </h3>
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Weight (Kg)</label>
+                            <input type="number" value={formData.weight_kg} onChange={(e) => setFormData({...formData, weight_kg: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Length (cm)</label>
+                            <input type="number" value={formData.dimensions.length} onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, length: e.target.value}})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Breadth (cm)</label>
+                            <input type="number" value={formData.dimensions.breadth} onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, breadth: e.target.value}})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Height (cm)</label>
+                            <input type="number" value={formData.dimensions.height} onChange={(e) => setFormData({...formData, dimensions: {...formData.dimensions, height: e.target.value}})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                         </div>
+                         <div className="col-span-2">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">HSN Code</label>
+                            <input value={formData.hsn_code} onChange={(e) => setFormData({...formData, hsn_code: e.target.value})} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold" placeholder="Required for Invoice" />
+                         </div>
                     </div>
 
-                    {/* Stock */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Stock</label>
-                            <input 
-                                type="number"
-                                min="0"
-                                value={formData.stock_quantity}
-                                onChange={(e) => setFormData({...formData, stock_quantity: e.target.value})}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold"
-                            />
-                    </div>
-
-                    {/* Min Qty */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Minimum Qty</label>
-                            <input 
-                                type="number"
-                                min="0"
-                                value={formData.min_quantity}
-                                onChange={(e) => setFormData({...formData, min_quantity: e.target.value})}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold"
-                            />
-                    </div>
-
-                    {/* Description */}
-                    <div className="md:col-span-2">
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
-                            <textarea 
-                                rows={6}
-                                value={formData.description}
-                                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-medium resize-none"
-                            />
-                    </div>
-
-                    {/* Price */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Price</label>
-                            <input 
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={formData.price}
-                                onChange={(e) => setFormData({...formData, price: e.target.value})}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold"
-                            />
-                    </div>
-
-                    {/* Tax */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tax (%)</label>
-                            <input 
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={formData.tax}
-                                onChange={(e) => setFormData({...formData, tax: e.target.value})}
-                                placeholder="e.g. 18"
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold placeholder:font-medium placeholder:text-slate-300"
-                            />
-                    </div>
-
-                    {/* Discount */}
-                    <div>
-                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">% Discount</label>
-                            <input 
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                value={formData.discount}
-                                onChange={(e) => setFormData({...formData, discount: e.target.value})}
-                                placeholder="e.g. 10"
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-bold placeholder:font-medium placeholder:text-slate-300"
-                            />
+                    {/* SEO & Integrations */}
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Zakeke Template ID</label>
+                             <input value={formData.zakeke_template_id} onChange={(e) => setFormData({...formData, zakeke_template_id: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold" placeholder="For 3D Customizer" />
+                        </div>
+                        <div>
+                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">SEO Title</label>
+                             <input value={formData.seo.title} onChange={(e) => setFormData({...formData, seo: {...formData.seo, title: e.target.value}})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold" />
+                        </div>
                     </div>
 
                     {/* Status */}
@@ -501,17 +592,33 @@ export default function EditProductPage() {
                                 >
                                     <option value="closed">Closed</option>
                                     <option value="open">Open</option>
+                                    <option value="active">Active</option>
                                 </select>
                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                             </div>
                     </div>
 
-                    {/* Zakeke & SEO */}
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Zakeke Template ID</label>
-                             <input value={formData.zakeke_template_id} onChange={(e) => setFormData({...formData, zakeke_template_id: e.target.value})} className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm font-bold" placeholder="For 3D Customizer" />
-                        </div>
+                    {/* Featured Toggle */}
+                    <div className="flex items-center gap-3">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Featured Product</label>
+                        <button
+                            type="button"
+                            onClick={() => setFormData({...formData, is_featured: !formData.is_featured})}
+                            className={`w-12 h-6 rounded-full transition-all relative ${formData.is_featured ? 'bg-[#4C63FC]' : 'bg-slate-200'}`}
+                        >
+                            <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-0.5 transition-all ${formData.is_featured ? 'left-6' : 'left-0.5'}`} />
+                        </button>
+                    </div>
+
+                    {/* Description */}
+                    <div className="md:col-span-2">
+                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
+                            <textarea 
+                                rows={6}
+                                value={formData.description}
+                                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#4C63FC]/10 focus:border-[#4C63FC] transition-all outline-none text-slate-700 text-sm font-medium resize-none"
+                            />
                     </div>
 
                     {/* Multi Image Upload */}
@@ -571,6 +678,7 @@ export default function EditProductPage() {
                     </div>
                 </div>
 
+                {/* Footer Buttons */}
                 <div className="flex items-center justify-end gap-3 mt-12 pt-8">
                    <Link href="/admin/products">
                         <button type="button" className="flex items-center justify-center gap-2 px-8 py-3 bg-[#FF6B6B] text-white rounded-xl shadow-lg shadow-red-500/20 text-sm font-bold hover:bg-red-500 transition-colors w-32">

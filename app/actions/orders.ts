@@ -253,7 +253,7 @@ export async function getAllOrders() {
         *,
         products (name, image_url, slug)
       ),
-      user:profiles (email, full_name)
+      user:profiles!user_id (email, full_name)
     `)
     .order("created_at", { ascending: false });
 
@@ -475,9 +475,73 @@ export async function requestOrderReturn(orderId: string) {
 
   if (auditError) console.error("Error creating audit log:", auditError);
 
-  revalidatePath(`/dashboard/orders`);
   revalidatePath(`/orders/${orderId}`);
   revalidatePath(`/admin/orders`);
   revalidatePath(`/admin/orders/${orderId}`);
   return { success: true };
+}
+
+export async function verifyPaymentStatus(orderId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+    
+    // Fetch Order
+    const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single();
+    if (!order) throw new Error("Order not found");
+
+    if (!order.razorpay_order_id) {
+         throw new Error("No Razorpay Order ID linked to this order.");
+    }
+
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        throw new Error("Razorpay keys missing.");
+    }
+
+    try {
+        const instance = new Razorpay({
+            key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+
+        // Fetch order from Razorpay
+        const rzOrder = await instance.orders.fetch(order.razorpay_order_id);
+        
+        let newStatus: OrderStatus | null = null;
+        if (rzOrder.status === 'paid') {
+            newStatus = 'PLACED';
+        } else if (rzOrder.status === 'attempted') {
+             // Check payments
+             const payments = await instance.orders.fetchPayments(order.razorpay_order_id);
+             const captured = payments.items.find((p: any) => p.status === 'captured');
+             if (captured) {
+                  newStatus = 'PLACED';
+                  // Update payment ID if different
+                  if (captured.id !== order.razorpay_payment_id) {
+                      await supabase.from('orders').update({ razorpay_payment_id: captured.id }).eq('id', orderId);
+                  }
+             }
+        }
+
+        if (newStatus && newStatus !== order.status) {
+             const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+             if (error) throw error;
+             
+             await supabase.from("order_status_history").insert({
+                order_id: orderId,
+                status: newStatus,
+                changed_by: user.id
+             });
+             
+             revalidatePath(`/admin/orders/${orderId}`);
+             return { success: true, status: newStatus, message: "Payment verified. Order status updated." };
+        }
+
+        return { success: false, status: rzOrder.status, message: `Razorpay status: ${rzOrder.status}. No change needed.` };
+
+    } catch (error: any) {
+        console.error("Payment Verification Error:", error);
+        throw new Error(error.message || "Verification failed");
+    }
 }

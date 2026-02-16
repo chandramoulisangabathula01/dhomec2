@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { 
@@ -32,6 +33,39 @@ export default function ProductListClient({
   const searchParams = useSearchParams();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (productId: string, productName: string) => {
+    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) return;
+    setDeleting(productId);
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', productId);
+      
+      if (error) {
+        // Handle Foreign Key Constraint Violation (product used in orders)
+        if (error.code === '23503') { 
+            if (confirm(`Cannot delete "${productName}" because it is part of existing orders/carts. \n\nWould you like to mark it as "Closed" (Hidden) instead?`)) {
+                const { error: updateError } = await supabase
+                    .from('products')
+                    .update({ status: 'closed' })
+                    .eq('id', productId);
+                
+                if (updateError) throw updateError;
+                alert("Product marked as Closed.");
+                router.refresh();
+            }
+        } else {
+            throw error;
+        }
+      } else {
+        router.refresh();
+      }
+    } catch (err: any) {
+      alert('Failed to delete product: ' + err.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   // Toggle Selection
   const handleSelectAll = () => {
@@ -209,7 +243,13 @@ export default function ProductListClient({
                         <Link href={`/admin/products/edit/${product.id}`}>
                             <button className="p-1.5 text-slate-400 hover:text-[#4C63FC] hover:bg-blue-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>
                         </Link>
-                        <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <button 
+                            onClick={() => handleDelete(product.id, product.name)}
+                            disabled={deleting === product.id}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <Trash2 className={`w-4 h-4 ${deleting === product.id ? 'animate-pulse' : ''}`} />
+                        </button>
                      </div>
                   </td>
                 </tr>

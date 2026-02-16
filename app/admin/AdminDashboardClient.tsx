@@ -82,13 +82,19 @@ export default function AdminDashboardClient({
   const availableYears = Object.keys(revenueChartData || {}).map(Number).sort((a, b) => b - a);
   const barData = (revenueChartData && revenueChartData[selectedYear]) || [];
 
+  // Role Based Visibility
+  const role = userProfile?.role || 'GUEST';
+  const showFinancials = ['SUPER_ADMIN', 'ADMIN'].includes(role);
+  const showOperations = ['SUPER_ADMIN', 'ADMIN', 'LOGISTICS_STAFF'].includes(role);
+
   if (!mounted) {
     return <div className="p-10 text-center text-slate-400">Loading dashboard...</div>;
   }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Top Stats Row */}
+      {/* Top Stats Row - Only for Admin */}
+      {showFinancials && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <StatCard 
           title="Total Earnings" 
@@ -112,12 +118,22 @@ export default function AdminDashboardClient({
           data={productsData} 
         />
       </div>
+      )}
+      
+      {!showFinancials && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
+              <h1 className="text-2xl font-black text-slate-900">Welcome back, {userProfile?.full_name?.split(' ')[0]}!</h1>
+              <p className="text-slate-500 text-sm font-bold mt-1">You are logged in as {role.replace('_', ' ')}</p>
+          </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-6">
           
           {/* Revenue Chart */}
+          {/* Revenue Chart */}
+          {showFinancials && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-900">Financial Performance</h3>
@@ -164,6 +180,7 @@ export default function AdminDashboardClient({
               </ResponsiveContainer>
             </div>
           </div>
+          )}
 
           {/* Latest Orders Table */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -238,6 +255,7 @@ export default function AdminDashboardClient({
         {/* Right Sidebar Widgets */}
         <div className="space-y-6">
           {/* Balance Card - Real Data */}
+          {showFinancials && (
           <div className="bg-[#4C63FC] p-6 rounded-2xl shadow-xl shadow-blue-500/30 text-white relative overflow-hidden group">
             <div className="relative z-10 transition-transform group-hover:scale-[1.02] duration-300">
               <div className="flex items-start justify-between mb-8">
@@ -259,6 +277,7 @@ export default function AdminDashboardClient({
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-colors duration-500"></div>
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl group-hover:bg-white/15 transition-colors duration-500"></div>
           </div>
+          )}
 
           {/* Top Categories (Replacing Popular Search) */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -282,6 +301,7 @@ export default function AdminDashboardClient({
           </div>
 
           {/* Quick Metrics */}
+          {showFinancials && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <h3 className="font-bold text-slate-900 mb-5 text-sm uppercase tracking-wider">Store Metrics</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -298,6 +318,7 @@ export default function AdminDashboardClient({
                </div>
             </div>
           </div>
+          )}
 
           {/* Recent Tickets (Replacing Recent Messages) */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">

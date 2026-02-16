@@ -33,7 +33,7 @@ export default async function AdminOrdersPage() {
     .from("orders")
     .select(`
         *, 
-        profile:profiles(full_name, email),
+        profile:profiles!user_id(full_name, email),
         order_items(
             quantity,
             product:products(name, weight_kg, dimensions)
@@ -43,7 +43,7 @@ export default async function AdminOrdersPage() {
     .limit(50); // Limit for performance
 
   if (error) {
-    console.error("Error fetching admin orders:", error);
+    console.error("Error fetching admin orders:", JSON.stringify(error, null, 2));
   }
 
   // Calculate Stats

@@ -138,6 +138,85 @@ export async function POST(req: Request) {
         });
       }
 
+      case "create_demo_order": {
+        if (token) {
+          try {
+            const demoOrderId = `DEMO-${Date.now().toString().slice(-6)}`;
+            const demoPayload = {
+              order_id: demoOrderId,
+              order_date: new Date().toISOString().split("T")[0],
+              pickup_location: "Primary",
+              billing_customer_name: "Test User",
+              billing_last_name: "Demo",
+              billing_address: "123 Test Street",
+              billing_address_2: "Near Test Landmark",
+              billing_city: "Mumbai",
+              billing_pincode: "400001",
+              billing_state: "Maharashtra",
+              billing_country: "India",
+              billing_email: "test@dhomec.com",
+              billing_phone: "9999999999",
+              shipping_is_billing: true,
+              order_items: [
+                {
+                  name: "Demo Product",
+                  sku: "DEMO-SKU-001",
+                  units: 1,
+                  selling_price: "100",
+                  discount: 0,
+                  tax: 0,
+                  hsn: 94034000,
+                },
+              ],
+              payment_method: "Prepaid",
+              sub_total: 100,
+              length: 10,
+              breadth: 10,
+              height: 10,
+              weight: 0.5,
+            };
+
+            const res = await fetch(`${SR_BASE}/orders/create/adhoc`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(demoPayload),
+            });
+
+            const data = await res.json();
+
+            if (data.order_id) {
+              return NextResponse.json({
+                success: true,
+                message: "Demo order created successfully",
+                shiprocket_order_id: data.order_id,
+                shipment_id: data.shipment_id,
+                awb_code: data.awb_code || null,
+                payload_used: demoPayload
+              });
+            } else {
+              return NextResponse.json({
+                success: false,
+                error: data.message || "Failed to create demo order",
+                full_response: data
+              }, { status: 400 });
+            }
+          } catch (apiErr: any) {
+            return NextResponse.json({
+              success: false,
+              error: apiErr.message
+            }, { status: 500 });
+          }
+        }
+        
+        return NextResponse.json({ 
+            success: false, 
+            error: "Authentication failed. Check SR_EMAIL and SR_PASSWORD." 
+        }, { status: 401 });
+      }
+
       case "generate_awb": {
         const { shipment_id } = body;
 

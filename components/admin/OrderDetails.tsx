@@ -18,7 +18,8 @@ import {
   ChevronRight,
   ExternalLink,
   Printer,
-  ChevronDown
+  ChevronDown,
+  RotateCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -107,6 +108,28 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
     } finally {
       setUpdating(false);
     }
+  };
+
+  /* Payment Verification */
+  const [verifying, setVerifying] = useState(false);
+  const handleVerifyPayment = async () => {
+      setVerifying(true);
+      try {
+          // Dynamically import to avoid server-client issues if action uses server-only modules? 
+          // Actions are safe to import.
+          const { verifyPaymentStatus } = await import("@/app/actions/orders");
+          const result = await verifyPaymentStatus(order.id);
+          if (result.success) {
+              alert(result.message);
+              router.refresh();
+          } else {
+              alert(result.message);
+          }
+      } catch (err: any) {
+          alert("Verification failed: " + err.message);
+      } finally {
+          setVerifying(false);
+      }
   };
 
   const submitShipping = (e: React.FormEvent) => {
@@ -227,11 +250,21 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
              </Link>
              
              <div className="flex gap-2 p-1.5 bg-slate-900 rounded-[22px] shadow-lg shadow-slate-200">
+                {currentStatus === 'PENDING_PAYMENT' && (
+                    <Button 
+                        onClick={handleVerifyPayment}
+                        disabled={verifying || updating}
+                        className="rounded-[18px] font-black text-[11px] uppercase tracking-widest h-11 px-6 bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                        {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <RotateCw className="w-3.5 h-3.5 mr-2" />}
+                        Verify Payment
+                    </Button>
+                )}
                 {nextActions.map((action, idx) => (
                     <Button 
                         key={idx}
                         onClick={() => handleStatusUpdate(action.next as OrderStatus)}
-                        disabled={updating}
+                        disabled={updating || verifying}
                         className={`rounded-[18px] font-black text-[11px] uppercase tracking-widest h-11 px-6 transition-all ${
                             action.next === 'CANCELLED' ? 'bg-transparent text-rose-400 hover:bg-rose-500/10' : 'bg-blue-600 text-white hover:bg-blue-500'
                         }`}
@@ -240,7 +273,7 @@ export default function OrderDetails({ order: initialOrder, history }: OrderDeta
                         {action.label}
                     </Button>
                 ))}
-                {nextActions.length === 0 && (
+                {nextActions.length === 0 && currentStatus !== 'PENDING_PAYMENT' && (
                      <div className="px-6 py-2.5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         Process Concluded
                      </div>

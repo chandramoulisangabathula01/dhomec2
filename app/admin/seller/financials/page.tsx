@@ -47,7 +47,7 @@ export default function FinancialsPage() {
     setLoading(true);
     let query = supabase
       .from("orders")
-      .select("id, created_at, total_amount, status, razorpay_payment_id, production_status, profile:profiles(full_name)")
+      .select("id, created_at, total_amount, status, razorpay_payment_id, production_status, profile:profiles!user_id(full_name)")
       .not("status", "eq", "CANCELLED")
       .not("status", "eq", "PENDING_PAYMENT")
       .order("created_at", { ascending: false });

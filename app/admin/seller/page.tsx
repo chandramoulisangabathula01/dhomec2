@@ -51,7 +51,7 @@ export default async function SellerDashboard() {
     supabase.from("orders").select("*", { count: "exact", head: true })
       .in("production_status", ["New", "In-Production"])
       .lte("target_ship_date", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()),
-    supabase.from("orders").select("*, profile:profiles(full_name), items:order_items(*, product:products(name))")
+    supabase.from("orders").select("*, profile:profiles!user_id(full_name), items:order_items(*, product:products(name))")
       .in("production_status", ["New", "In-Production"])
       .lte("target_ship_date", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
       .order("target_ship_date", { ascending: true })
@@ -62,7 +62,7 @@ export default async function SellerDashboard() {
       .order("stock_quantity", { ascending: true })
       .limit(8),
     supabase.from("seller_settings").select("*"),
-    supabase.from("orders").select("*, profile:profiles(full_name)")
+    supabase.from("orders").select("*, profile:profiles!user_id(full_name)")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);

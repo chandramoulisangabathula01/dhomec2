@@ -338,24 +338,7 @@ export default function AdminLayout({
              </div>
           ))}
           
-          <SectionTitle title="Session" />
-          <MenuItem item={{ label: "Log Out", href: "#", icon: LogOut, roles: undefined }} /> 
-          {/* We handle logout click separately in the MenuItem component or by wrapping, 
-              but since MenuItem uses Link, we might need a button. 
-              Refactoring MenuItem to handle onClick better or just hardcode Logout */}
-          
-           
-          <div className="mb-1">
-             <button
-               onClick={handleLogout}
-               className="w-full flex items-center md:justify-center lg:justify-between px-4 py-3 rounded-xl transition-all duration-200 group text-slate-500 hover:bg-red-50 hover:text-red-700"
-             >
-                <div className="flex items-center gap-3">
-                   <LogOut className="w-5 h-5 flex-shrink-0 text-slate-400 group-hover:text-red-500" />
-                   <span className="text-sm font-medium md:hidden lg:block">Log Out</span>
-                </div>
-             </button>
-          </div>
+
 
         </div>
       </aside>

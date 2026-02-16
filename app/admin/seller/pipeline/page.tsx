@@ -42,6 +42,7 @@ const TABS = [
   { key: "new", label: "New Work", icon: Package, color: "blue" },
   { key: "production", label: "In Production", icon: Factory, color: "orange" },
   { key: "qc", label: "Quality Check", icon: ClipboardCheck, color: "purple" },
+  { key: "done", label: "Work Done", icon: CheckCircle2, color: "emerald" },
   { key: "ready", label: "Ready to Pack", icon: Truck, color: "green" },
   { key: "critical", label: "Critical SLA", icon: AlertTriangle, color: "red" },
 ];
@@ -50,6 +51,7 @@ const STATUS_MAP: Record<string, string> = {
   new: "New",
   production: "In-Production",
   qc: "QC",
+  done: "Passed",
   ready: "Ready",
 };
 
@@ -72,6 +74,7 @@ function getSLAInfo(targetDate: string | null, startDate: string | null) {
 export default function PipelinePage() {
   const [activeTab, setActiveTab] = useState("new");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [staff, setStaff] = useState<{id: string, full_name: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
@@ -90,6 +93,15 @@ export default function PipelinePage() {
     if (tab && TABS.some((t) => t.key === tab)) {
       setActiveTab(tab);
     }
+    
+    // Fetch Staff
+    const fetchStaff = async () => {
+        // Fetch users with admin or logistics role. 
+        // Note: You might need to adjust RLS or query based on your 'profiles' table schema.
+        const { data } = await supabase.from('profiles').select('id, full_name').in('role', ['ADMIN', 'LOGISTICS_STAFF', 'STAFF']);
+        if (data) setStaff(data);
+    };
+    fetchStaff();
   }, []);
 
   const fetchOrders = useCallback(async () => {
@@ -120,7 +132,7 @@ export default function PipelinePage() {
       // Fetch orders for active tab
       let query = supabase
         .from("orders")
-        .select("*, profile:profiles(full_name), items:order_items(quantity, product:products(name))")
+        .select("*, profile:profiles!user_id(full_name), items:order_items(quantity, product:products(name)), assignee:profiles!assigned_to(full_name)")
         .order("target_ship_date", { ascending: true, nullsFirst: false });
 
       if (activeTab === "critical") {
@@ -134,10 +146,12 @@ export default function PipelinePage() {
       }
 
       const { data, error } = await query;
-      if (error) console.error("Pipeline fetch error:", error);
+      if (error) {
+          console.error("Pipeline fetch error details:", JSON.stringify(error, null, 2));
+      }
       setOrders((data as unknown as Order[]) || []);
-    } catch (err) {
-      console.error("Pipeline error:", err);
+    } catch (err: any) {
+      console.error("Pipeline catch error:", err.message || err);
     }
     setLoading(false);
   }, [activeTab, supabase]);
@@ -149,9 +163,21 @@ export default function PipelinePage() {
   const moveOrder = async (orderId: string, newStatus: string) => {
     const updateData: any = { production_status: newStatus };
     if (newStatus === "In-Production") updateData.start_date = new Date().toISOString();
+    
+    // Sync Status Logic
+    if (newStatus === "Ready") {
+        updateData.status = "PACKED"; // Ready to ship
+    } else if (newStatus === "Passed") {
+        // Optional: Maybe set status to 'QUALITY_PASSED' if you have that status, otherwise keep current
+    }
 
     await supabase.from("orders").update(updateData).eq("id", orderId);
     fetchOrders();
+  };
+  
+  const assignUser = async (orderId: string, userId: string) => {
+      await supabase.from("orders").update({ assigned_to: userId || null }).eq("id", orderId);
+      fetchOrders();
   };
 
   const toggleMaterials = async (orderId: string, available: boolean) => {
@@ -202,7 +228,8 @@ export default function PipelinePage() {
     const flow: Record<string, string> = {
       New: "In-Production",
       "In-Production": "QC",
-      QC: "Ready",
+      QC: "Passed",
+      Passed: "Ready",
     };
     return flow[current];
   };
@@ -216,6 +243,7 @@ Customer: ${order.profile?.full_name || "Guest"}
 Amount: ₹${Number(order.total_amount).toLocaleString()}
 Target Ship Date: ${order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : "TBD"}
 Status: ${order.production_status}
+Assigned To: ${(order as any).assignee?.full_name || "Unassigned"}
 
 --- ITEMS ---
 ${items}
@@ -303,6 +331,7 @@ Materials Available: ${order.materials_available ? "Yes" : "No"}
               <option value="">Bulk Action...</option>
               <option value="In-Production">→ Move to Production</option>
               <option value="QC">→ Move to QC</option>
+              <option value="Passed">→ Move to Passed (Work Done)</option>
               <option value="Ready">→ Move to Ready</option>
             </select>
             <button
@@ -349,7 +378,8 @@ Materials Available: ${order.materials_available ? "Yes" : "No"}
                 </th>
                 <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order & Customer</th>
                 <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Items</th>
-                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">SLA Progress</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Assignee</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">SLA</th>
                 <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Materials</th>
                 <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
                 <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -388,6 +418,18 @@ Materials Available: ${order.materials_available ? "Yes" : "No"}
                       </div>
                     </td>
                     <td className="p-4">
+                        <select 
+                            value={(order as any).assigned_to || ""}
+                            onChange={(e) => assignUser(order.id, e.target.value)}
+                            className="bg-transparent border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 py-1 px-2 focus:ring-1 focus:ring-blue-500 outline-none w-32"
+                        >
+                            <option value="">Unassigned</option>
+                            {staff.map(s => (
+                                <option key={s.id} value={s.id}>{s.full_name}</option>
+                            ))}
+                        </select>
+                    </td>
+                    <td className="p-4">
                       <div className="space-y-1.5 w-36">
                         <div className="flex items-center justify-between">
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
@@ -397,9 +439,6 @@ Materials Available: ${order.materials_available ? "Yes" : "No"}
                             "bg-green-100 text-green-700"
                           }`}>
                             {sla.label}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {sla.hours > 0 ? `${sla.hours}h` : ""}
                           </span>
                         </div>
                         {/* Progress bar */}
@@ -414,9 +453,6 @@ Materials Available: ${order.materials_available ? "Yes" : "No"}
                             style={{ width: `${sla.percent}%` }}
                           />
                         </div>
-                        <p className="text-[9px] text-slate-400">
-                          {order.target_ship_date ? `Ship by ${new Date(order.target_ship_date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : "No deadline"}
-                        </p>
                       </div>
                     </td>
                     <td className="p-4">

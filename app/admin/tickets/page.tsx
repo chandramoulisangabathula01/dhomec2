@@ -10,7 +10,7 @@ export default async function AdminTicketsPage() {
   // Get Current User Role
   const { data: { user } } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single();
-  const isSupport = profile?.role === 'SUPPORT_STAFF';
+  const role = profile?.role || 'GUEST';
 
   // Fetch Tickets
   let query = supabase
@@ -19,7 +19,7 @@ export default async function AdminTicketsPage() {
     .order("created_at", { ascending: false });
 
   // If Support Staff, only show unassigned OR assigned to them
-  if (isSupport) {
+  if (role === 'SUPPORT_STAFF') {
       query = query.or(`assigned_staff_id.is.null,assigned_staff_id.eq.${user?.id}`);
   }
 
@@ -129,7 +129,8 @@ export default async function AdminTicketsPage() {
                         <tr>
                             <td colSpan={5} className="p-12 text-center text-slate-400">
                                 <MessageSquare className="w-12 h-12 mx-auto opacity-10 mb-3" />
-                                <p className="text-sm font-bold opacity-50">No active tickets found</p>
+                                <p className="text-sm font-bold opacity-50">No tickets found in your queue.</p>
+                                {role === 'SUPPORT_STAFF' && <p className="text-xs mt-1">You are viewing Unassigned tickets and tickets assigned to you.</p>}
                             </td>
                         </tr>
                     )}

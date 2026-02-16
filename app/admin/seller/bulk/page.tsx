@@ -55,7 +55,7 @@ export default function BulkOperationsPage() {
     setLoading(true);
     const { data } = await supabase
       .from("orders")
-      .select("id, production_status, profile:profiles(full_name), total_amount, created_at")
+      .select("id, production_status, profile:profiles!user_id(full_name), total_amount, created_at")
       .in("production_status", ["New", "In-Production", "QC", "Ready"])
       .order("created_at", { ascending: false });
     setOrders((data as unknown as BulkOrder[]) || []);
