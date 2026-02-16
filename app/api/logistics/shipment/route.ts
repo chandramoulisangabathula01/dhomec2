@@ -133,7 +133,7 @@ export async function POST(req: Request) {
           shipment_id: `SHP-${Date.now()}`,
           awb_code: generateMockAWB(),
           label_url: null,
-          tracking_url: `https://track.dhomec.com/${generateMockAWB()}`,
+          tracking_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/orders/track?awb=${generateMockAWB()}`,
           source: "mock",
         });
       }

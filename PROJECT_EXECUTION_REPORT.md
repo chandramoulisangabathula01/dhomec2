@@ -1,7 +1,7 @@
 # Dhomec - Project Execution Report
-**Date:** February 10, 2026
+**Date:** February 14, 2026
 **Status:** Completed & Optimized
-**Technology Stack:** Next.js 15, Supabase, Tailwind CSS, Razorpay
+**Technology Stack:** Next.js 15, Supabase, Tailwind CSS, Razorpay, Shiprocket (Logistics)
 
 ---
 
@@ -13,6 +13,7 @@ Dhomec is a high-performance, premium e-commerce and consultation platform tailo
 - **Premium User Experience:** Modern design with advanced animations (Framer Motion/GSAP).
 - **Secure Infrastructure:** Real-time data sync and secure authentication via Supabase.
 - **Comprehensive Admin Suite:** End-to-end control over sales, support, and content.
+- **Logistics Integration:** Seamless Shiprocket API integration for shipping, AWB generation, and tracking.
 
 ---
 
@@ -25,6 +26,7 @@ Dhomec is a high-performance, premium e-commerce and consultation platform tailo
 | **Database & Auth** | Supabase (PostgreSQL) |
 | **Real-time Engine** | Supabase Realtime |
 | **Payment Gateway** | Razorpay (In-built Webhook Support) |
+| **Logistics** | Shiprocket (API + Webhooks) |
 | **Deployment** | Optimized for Vercel/Netlify |
 
 ---
@@ -45,6 +47,7 @@ Dhomec is a high-performance, premium e-commerce and consultation platform tailo
 ### Phase 3: Administrative & Support Ecosystem
 - **Omni-Admin Panel:** A comprehensive dashboard for managing:
     - **Sales:** Order tracking, status updates, and revenue analytics.
+    - **Logistics:** Shiprocket integration for AWB generation and shipment tracking.
     - **Engagement:** Direct management of customer enquiries and support tickets.
     - **Inventory:** Full CRUD for products and categories.
 - **Ticketing & Returns:** Logic for handling product returns and customer support tickets with real-time status updates.
@@ -58,7 +61,10 @@ Dhomec is a high-performance, premium e-commerce and consultation platform tailo
 ---
 
 ## 4. 🚀 Features Developed (Recent Highlights)
-- ✅ **Wishlist System:** Complete add/remove/view flow integrated with customer dashboards.
+- ✅ **Shiprocket Setup:** Full integration with Shiprocket API (Token based auth) for logistics management.
+- ✅ **Real-time Tracking:** Webhook listener (`/api/webhooks/delivery-updates`) to auto-update order status (Manifested -> Shipped -> Delivered).
+- ✅ **Serviceability Check:** Pincode check on product pages using Shiprocket serviceability API.
+- ✅ **Secure Webhooks:** Header verification (`x-api-key`) and robust error handling (always 200 OK) for Shiprocket compliance.
 - ✅ **Returns Management:** Admin-facing interface to approve/reject and manage refunds.
 - ✅ **Enhanced Enquiries:** Admin tool to track and respond to potential leads with WhatsApp quick-links.
 - ✅ **Automated Policy Pages:** Dynamic Terms, Privacy, and Return policy pages with professional typography.
@@ -80,7 +86,7 @@ The project is currently in a **Release Candidate** state. All core functionalit
 
 ### Success Criteria Met:
 - [x] Seamless user journey from landing page to checkout.
-- [x] Automated order processing and notification triggers.
+- [x] Automated order processing, logistics integration, and notification triggers.
 - [x] Fully functional admin dashboard for daily operations.
 - [x] High-performance rendering and SEO optimization.
 

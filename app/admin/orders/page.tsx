@@ -201,7 +201,9 @@ export default async function AdminOrdersPage() {
                     </tr>
                     </thead>
                     <tbody className="text-sm">
-                    {orders && orders.length > 0 ? orders.map((order) => {
+                    {orders && orders.length > 0 ? orders
+                    .filter(order => !['PENDING_PAYMENT', 'CANCELLED', 'REFUNDED'].includes(order.status))
+                    .map((order) => {
                         const totalWeight = order.order_items?.reduce((acc: number, item: any) => acc + ((item.product?.weight_kg || 0) * item.quantity), 0).toFixed(2);
                         const itemCount = order.order_items?.reduce((acc: number, item: any) => acc + item.quantity, 0);
                         const address = (order.shipping_address as any) || {};

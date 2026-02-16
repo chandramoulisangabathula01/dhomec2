@@ -128,7 +128,9 @@ export default function PipelinePage() {
           .in("production_status", ["New", "In-Production"])
           .lte("target_ship_date", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString());
       } else {
-        query = query.eq("production_status", STATUS_MAP[activeTab] || "New");
+        query = query
+            .eq("production_status", STATUS_MAP[activeTab] || "New")
+            .neq("status", "PENDING_PAYMENT");
       }
 
       const { data, error } = await query;

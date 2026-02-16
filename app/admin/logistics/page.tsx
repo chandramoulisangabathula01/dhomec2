@@ -20,9 +20,10 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-type ShipmentStatus = "PLACED" | "ACCEPTED" | "PACKED" | "SHIPPED" | "DELIVERED";
+type ShipmentStatus = "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PACKED" | "SHIPPED" | "DELIVERED";
 
 const STATUS_COLORS: Record<string, string> = {
+  PENDING_PAYMENT: "bg-slate-100 text-slate-600",
   PLACED: "bg-blue-100 text-blue-700",
   ACCEPTED: "bg-amber-100 text-amber-700",
   PACKED: "bg-purple-100 text-purple-700",
@@ -75,6 +76,7 @@ export default function LogisticsPage() {
           products (name, sku, weight_kg, dimensions, hsn_code)
         )
       `)
+      .neq("status", "PENDING_PAYMENT")
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -255,7 +257,7 @@ export default function LogisticsPage() {
           />
         </div>
         <div className="flex gap-2 flex-wrap">
-          {["ALL", ...STATUS_STEPS, "CANCELLED"].map((status) => (
+          {["ALL", "PENDING_PAYMENT", ...STATUS_STEPS, "CANCELLED"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -265,7 +267,7 @@ export default function LogisticsPage() {
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {status.replace("_", " ")}
+              {status === "PENDING_PAYMENT" ? "PENDING" : status.replace("_", " ")}
             </button>
           ))}
         </div>
